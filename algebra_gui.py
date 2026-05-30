@@ -688,7 +688,7 @@ class TestProgressWindow:
 class AlgebraCalculatorGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("代数表达式计算器 V2.0.0 --------------------全基础运算 --------------------   构建时间: 5.30  ")
+        self.root.title("代数表达式计算器 V2.0.0(稳定版) --------------------全基础运算 --------------------   构建时间: 5.30  ")
         self.root.geometry("1200x900")
 
         # 创建计算器实例
