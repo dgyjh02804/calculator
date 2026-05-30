@@ -51,12 +51,11 @@ class Fraction:
     def __mul__(self, other):
         if isinstance(other, int):
             other = Fraction(other, 1)
-        elif isinstance(other, Fraction):
+        if isinstance(other, Fraction):
             new_numerator = self.numerator * other.numerator
             new_denominator = self.denominator * other.denominator
             return Fraction(new_numerator, new_denominator)
-        else:
-            return NotImplemented
+        return NotImplemented
 
     def __truediv__(self, other):
         if isinstance(other, int):

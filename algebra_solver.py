@@ -757,6 +757,18 @@ class AlgebraicCalculator:
                 base_str = factor_str[start:end]
                 exp_str = factor_str[i + 1:]
                 left_part = factor_str[:start]
+
+                # 检查指数后面是否有 */ 运算符（不在括号内），这些应在 term 层级处理
+                # 例如 x^2/4 应解析为 (x^2)/4 而非 x^(2/4)
+                bkt = 0
+                for j, c in enumerate(exp_str):
+                    if c == '(':
+                        bkt += 1
+                    elif c == ')':
+                        bkt -= 1
+                    elif c in '*/' and bkt == 0:
+                        raise ValueError(f"指数后存在运算符 '{c}'，需在term层级处理")
+
                 if debug_callback:
                     debug_callback(f"处理幂运算: {base_str}^{exp_str}", level=3)
                 base = self._parse_factor(base_str, debug_callback)
@@ -773,10 +785,12 @@ class AlgebraicCalculator:
                             num_str, den_str = clean_exp_str.split('/')
                             num = int(num_str.strip())
                             den = int(den_str.strip())
-                            if num == 1 and den == 2:
+                            # 约分后判断是否等于 1/2 (sqrt)
+                            frac = Fraction(num, den)
+                            if frac.numerator == 1 and frac.denominator == 2:
                                 pow_expr = AlgebraicExpression([SqrtExpression(base)])
-                            elif den == 1:
-                                pow_expr = base ** num
+                            elif frac.denominator == 1:
+                                pow_expr = base ** frac.numerator
                             else:
                                 pow_expr = AlgebraicExpression([AlgebraicTerm(Fraction(1, 1), {})])
                         else:
@@ -864,6 +878,13 @@ class AlgebraicCalculator:
             return AlgebraicExpression([AlgebraicTerm(Fraction(1, 1), vars_dict)])
 
         # 最后尝试使用 AlgebraicTerm.from_string
+        # 但如果字符串包含括号或运算符（不在简单系数/变量范匹配内），
+        # 说明应该由更上层（_parse_term / _parse_add_sub）拆分处理
+        import re as _re
+        _has_paren = '(' in factor_str or ')' in factor_str
+        _has_top_op = bool(_re.search(r'(?<!\^)[+\-*/]', _re.sub(r'^[+-]', '', factor_str)))
+        if _has_paren or _has_top_op:
+            raise ValueError(f"表达式包含括号或运算符，需在上层处理: {factor_str}")
         try:
             term = AlgebraicTerm.from_string(factor_str)
             if debug_callback:
@@ -1280,12 +1301,22 @@ class AlgebraicCalculator:
             return result
 
         var = variables[0]
-        # 寻找第一个包含 var 的方程
+        # 寻找包含 var 的方程，优先选择 var 次数最低的方程（线性优于二次）
         eq_index = -1
+        best_degree = float('inf')
         for i, eq in enumerate(equations):
-            if any(term.contains_var(var) for term in eq.terms):
+            # 计算该方程中 var 的最高次数
+            max_deg = 0
+            for term in eq.terms:
+                if term.contains_var(var):
+                    if isinstance(term, AlgebraicTerm):
+                        deg = term.vars.get(var, 0)
+                        max_deg = max(max_deg, deg)
+                    else:
+                        max_deg = max(max_deg, 1)  # TermWithSqrt 等视为1次
+            if max_deg > 0 and max_deg < best_degree:
+                best_degree = max_deg
                 eq_index = i
-                break
 
         if eq_index == -1:
             # 没有方程包含 var，则 var 是自由变量
@@ -1803,6 +1834,17 @@ class AlgebraicCalculator:
                     is_zero = True
                 elif str(substituted).replace(' ', '') == '0':
                     is_zero = True
+                # 处理 FractionExpression：分式为零当且仅当分子为零
+                elif isinstance(substituted, FractionExpression):
+                    num_simplified = (substituted.numerator.simplify(debug_callback)
+                                      if hasattr(substituted.numerator, 'simplify') else substituted.numerator)
+                    if hasattr(num_simplified, 'is_zero') and num_simplified.is_zero():
+                        is_zero = True
+                    elif str(num_simplified).replace(' ', '') == '0':
+                        is_zero = True
+                    elif self.contains_radical(num_simplified):
+                        if _zero_after_squaring(num_simplified):
+                            is_zero = True
                 else:
                     # 手动合并同类根式项
                     if isinstance(substituted, AlgebraicExpression):

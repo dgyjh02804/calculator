@@ -233,6 +233,7 @@ class DebugCallback:
         self.lines = []
         # 添加消息队列，用于后台线程向主线程传递消息
         self.message_queue = []
+        self.max_queue_size = 2000  # 限制队列大小，防止内存/UI卡死
         self.is_running = False
 
     def set_debug_level(self, level):
@@ -252,6 +253,9 @@ class DebugCallback:
 
             # 如果是后台线程调用，将消息放入队列
             if threading.current_thread() != threading.main_thread():
+                # 限制队列大小，超过时丢弃旧消息
+                if len(self.message_queue) >= self.max_queue_size:
+                    self.message_queue.pop(0)
                 self.message_queue.append((message, level))
             else:
                 # 主线程直接显示
@@ -274,10 +278,13 @@ class DebugCallback:
             self.text_widget.see(tk.END)
 
     def process_queue(self):
-        """处理消息队列（在主线程中调用）"""
-        while self.message_queue:
+        """处理消息队列（在主线程中调用），每次最多处理100条防止UI卡死"""
+        batch_size = 100
+        processed = 0
+        while self.message_queue and processed < batch_size:
             message, level = self.message_queue.pop(0)
             self._display_message(message, level)
+            processed += 1
 
     def clear(self):
         """清空调试信息"""
@@ -757,7 +764,7 @@ class AlgebraCalculatorGUI:
                  "当 x+1 < 0 时，解为：x = -y-1"),
             ],
             "3.7": [
-                ("x^2+y^2=r^2; x+y=0", "x = r√(1/2), y = -r√(1/2) 或 x = -r√(1/2), y = r√(1/2)"),
+                ("x^2+y^2=r^2; x+y=0", "x = r√(1/2), y = -r√(1/2) 或 x = -r√(1/2), y = r√(1/2)", ['x', 'y']),
                 ("|x+y|=4; x^2+y^2=9",
                  "x = 2-(√(2))/2, y = 2+(√(2))/2 或 x = 2+(√(2))/2, y = 2-(√(2))/2 或 x = -2-(√(2))/2, y = -2+(√(2))/2 或 x = -2+(√(2))/2, y = -2-(√(2))/2"),
                 ("x^2+y^2-4x=9; x=y-1", "x = (1+√(17))/2, y = (3+√(17))/2 或 x = (1-√(17))/2, y = (3-√(17))/2"),
@@ -1796,29 +1803,81 @@ class AlgebraCalculatorGUI:
         self.test_thread.start()
 
     def _are_solutions_equivalent(self, expected, actual, test_type):
-        """判断两个解字符串是否数学等价（容忍格式差异）"""
+        """判断两个解字符串是否数学等价（使用 sympy 进行数学比较）"""
         import re
 
-        def normalize(s):
-            # 去除空白
-            s = s.strip()
-            # 将 (√(5))/2 统一为 (1/2)√(5) 形式
-            s = re.sub(r'\(√\(([^)]+)\)\)/(\d+)', r'(1/\2)√(\1)', s)
-            s = re.sub(r'√\(([^)]+)\)/(\d+)', r'(1/\2)√(\1)', s)
-            # 将 2*√(5) 统一为 2√(5)
-            s = re.sub(r'(\d+)\*√', r'\1√', s)
-            # 移除多余括号（但不影响运算顺序）
-            s = s.replace('(', '').replace(')', '')
-            return s
+        def to_sympy_expr(s):
+            """将计算器格式的表达式转换为 sympy 表达式"""
+            import sympy as sp
+            s = s.strip().replace(' ', '')
+            sqrt_char = '√'  # √
+            # 递归替换 √(...) → sqrt(...)
+            while sqrt_char + '(' in s:
+                s = re.sub(sqrt_char + r'\(([^()]+)\)', r'sqrt(\1)', s)
+            # 将 ^ 替换为 **
+            s = s.replace('^', '**')
+            # 处理隐式乘法
+            s = re.sub(r'(\d)([a-zA-Z])', r'\1*\2', s)
+            s = re.sub(r'(\d)sqrt', r'\1*sqrt', s)
+            s = re.sub(r'\)(\d)', r')*\1', s)
+            return sp.sympify(s)
 
-        # 对于多行解（如多变量方程），逐行规范化后比较集合
-        if '\n' in expected or '\n' in actual:
-            exp_lines = [normalize(line) for line in expected.strip().split('\n') if line.strip()]
-            act_lines = [normalize(line) for line in actual.strip().split('\n') if line.strip()]
-            # 排序后比较，避免行序不同
-            return sorted(exp_lines) == sorted(act_lines)
-        else:
-            return normalize(expected) == normalize(actual)
+        def compare_solution_line(exp_line, act_line):
+            """比较单行解（可能包含多个变量）"""
+            exp_pairs = {}
+            act_pairs = {}
+            for pair in re.split(r',\s*', exp_line):
+                if '=' in pair:
+                    var, val = pair.split('=', 1)
+                    exp_pairs[var.strip()] = val.strip()
+            for pair in re.split(r',\s*', act_line):
+                if '=' in pair:
+                    var, val = pair.split('=', 1)
+                    act_pairs[var.strip()] = val.strip()
+
+            if not exp_pairs or not act_pairs:
+                return exp_line == act_line
+
+            # 比较共同的变量
+            common_vars = set(exp_pairs.keys()) & set(act_pairs.keys())
+            if not common_vars:
+                return False
+
+            for var in sorted(common_vars):
+                try:
+                    e_expr = to_sympy_expr(exp_pairs[var])
+                    a_expr = to_sympy_expr(act_pairs[var])
+                    import sympy as sp
+                    if sp.simplify(e_expr - a_expr) != 0:
+                        return False
+                except Exception:
+                    # sympy 比较失败，回退到原始字符串比较
+                    if exp_pairs[var] != act_pairs[var]:
+                        return False
+            return True
+
+        # 主逻辑: 按"或"分割多个解组
+        exp_groups = [g.strip() for g in expected.split('或') if g.strip()]
+        act_groups = [g.strip() for g in actual.split('或') if g.strip()]
+
+        if len(exp_groups) != len(act_groups):
+            return False
+
+        # 对每个解组进行匹配
+        matched_act = set()
+        for exp_group in exp_groups:
+            found = False
+            for j, act_group in enumerate(act_groups):
+                if j in matched_act:
+                    continue
+                if compare_solution_line(exp_group, act_group):
+                    matched_act.add(j)
+                    found = True
+                    break
+            if not found:
+                return False
+
+        return True
 
     def _run_tests_thread(self, all_tests):
         """在后台线程中运行指定的测试用例列表"""
