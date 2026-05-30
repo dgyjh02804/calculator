@@ -1,0 +1,2351 @@
+[
+  {
+    "timestamp": "2026-02-27 13:09:07",
+    "type": "测试-表达式",
+    "expression": "(2x)/2",
+    "result": "x",
+    "status": "success",
+    "debug_lines": 12,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:07",
+    "type": "测试-表达式",
+    "expression": "2x+3x",
+    "result": "5x",
+    "status": "success",
+    "debug_lines": 25,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:07",
+    "type": "测试-表达式",
+    "expression": "a+b-(a-b)",
+    "result": "2b",
+    "status": "success",
+    "debug_lines": 46,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:07",
+    "type": "测试-表达式",
+    "expression": "x*x",
+    "result": "x^2",
+    "status": "success",
+    "debug_lines": 56,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:07",
+    "type": "测试-表达式",
+    "expression": "x/2 + x/2",
+    "result": "x",
+    "status": "success",
+    "debug_lines": 69,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:07",
+    "type": "测试-表达式",
+    "expression": "3*(x+y) - 2*(x+y)",
+    "result": "x+y",
+    "status": "success",
+    "debug_lines": 98,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:07",
+    "type": "测试-表达式",
+    "expression": "1/2/3/4/5/6/7/8/9",
+    "result": "1/362880",
+    "status": "success",
+    "debug_lines": 108,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:07",
+    "type": "测试-表达式",
+    "expression": "2*(a+b)",
+    "result": "2a+2b",
+    "status": "success",
+    "debug_lines": 126,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:07",
+    "type": "测试-表达式",
+    "expression": "(a+b)(c+d)",
+    "result": "ac+ad+bc+bd",
+    "status": "success",
+    "debug_lines": 152,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:07",
+    "type": "测试-表达式",
+    "expression": "(x+y)(x-y)",
+    "result": "x^2-y^2",
+    "status": "success",
+    "debug_lines": 178,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:07",
+    "type": "测试-表达式",
+    "expression": "(a+b)^2",
+    "result": "2ab+a^2+b^2",
+    "status": "success",
+    "debug_lines": 196,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:07",
+    "type": "测试-表达式",
+    "expression": "((2x)^2)",
+    "result": "4x^2",
+    "status": "success",
+    "debug_lines": 210,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:08",
+    "type": "测试-表达式",
+    "expression": "(8x^3)^(1/2)",
+    "result": "2x√(2x)",
+    "status": "success",
+    "debug_lines": 226,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:08",
+    "type": "测试-表达式",
+    "expression": "√(4)",
+    "result": "2",
+    "status": "success",
+    "debug_lines": 241,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:08",
+    "type": "测试-表达式",
+    "expression": "1/√(x+1)",
+    "result": "(√(x+1))/(x+1)",
+    "status": "success",
+    "debug_lines": 261,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:08",
+    "type": "测试-表达式",
+    "expression": "1/(x+1)+1",
+    "result": "(x+2)/(x+1)",
+    "status": "success",
+    "debug_lines": 307,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:08",
+    "type": "测试-表达式",
+    "expression": "1/(x+1)+x/(1+x)",
+    "result": "1",
+    "status": "success",
+    "debug_lines": 360,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:08",
+    "type": "测试-表达式",
+    "expression": "2/3*x",
+    "result": "(2/3)x",
+    "status": "success",
+    "debug_lines": 370,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:08",
+    "type": "测试-表达式",
+    "expression": "1/2x",
+    "result": "1/(2x)",
+    "status": "success",
+    "debug_lines": 386,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:08",
+    "type": "测试-表达式",
+    "expression": "(1/x)*x",
+    "result": "1",
+    "status": "success",
+    "debug_lines": 401,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:08",
+    "type": "测试-表达式",
+    "expression": "(1/(x+1))*(x+1)",
+    "result": "1",
+    "status": "success",
+    "debug_lines": 445,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:09",
+    "type": "测试-表达式",
+    "expression": "(3x/y)*y",
+    "result": "3x",
+    "status": "success",
+    "debug_lines": 462,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:09",
+    "type": "测试-表达式",
+    "expression": "a+√(b)",
+    "result": "a+√(b)",
+    "status": "success",
+    "debug_lines": 486,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:09",
+    "type": "测试-表达式",
+    "expression": "a-√(b)",
+    "result": "a-√(b)",
+    "status": "success",
+    "debug_lines": 512,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:09",
+    "type": "测试-表达式",
+    "expression": "a√(b)",
+    "result": "a√(b)",
+    "status": "success",
+    "debug_lines": 529,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:09",
+    "type": "测试-表达式",
+    "expression": "(-b+√(b^2-4a*c))/(2a)",
+    "result": "(-b+√(-4ac+b^2))/2a",
+    "status": "success",
+    "debug_lines": 564,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:09",
+    "type": "测试-表达式",
+    "expression": "|3|",
+    "result": "3",
+    "status": "success",
+    "debug_lines": 577,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:09",
+    "type": "测试-表达式",
+    "expression": "|-5|",
+    "result": "5",
+    "status": "success",
+    "debug_lines": 596,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:09",
+    "type": "测试-表达式",
+    "expression": "|0|",
+    "result": "0",
+    "status": "success",
+    "debug_lines": 608,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:09",
+    "type": "测试-表达式",
+    "expression": "|x|",
+    "result": "|x|",
+    "status": "success",
+    "debug_lines": 623,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:10",
+    "type": "测试-表达式",
+    "expression": "2*|x|",
+    "result": "|2x|",
+    "status": "success",
+    "debug_lines": 638,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:10",
+    "type": "测试-表达式",
+    "expression": "x*|y|",
+    "result": "|xy|",
+    "status": "success",
+    "debug_lines": 653,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:10",
+    "type": "测试-表达式",
+    "expression": "|x|+|x|",
+    "result": "|x|+|x|",
+    "status": "success",
+    "debug_lines": 684,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:10",
+    "type": "测试-表达式",
+    "expression": "|x+1|",
+    "result": "|(x+1)|",
+    "status": "success",
+    "debug_lines": 709,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:10",
+    "type": "测试-表达式",
+    "expression": "(1/2)*|x|",
+    "result": "|(1/2)x|",
+    "status": "success",
+    "debug_lines": 725,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:10",
+    "type": "测试-方程",
+    "expression": "x+2=5",
+    "result": "x = 3",
+    "status": "success",
+    "debug_lines": 745,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:10",
+    "type": "测试-方程",
+    "expression": "2x=8",
+    "result": "x = 4",
+    "status": "success",
+    "debug_lines": 762,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:10",
+    "type": "测试-方程",
+    "expression": "3x-6=0",
+    "result": "x = 2",
+    "status": "success",
+    "debug_lines": 782,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:10",
+    "type": "测试-方程",
+    "expression": "2x+3=7",
+    "result": "x = 2",
+    "status": "success",
+    "debug_lines": 802,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:11",
+    "type": "测试-方程",
+    "expression": "x/2 = 3",
+    "result": "x = 6",
+    "status": "success",
+    "debug_lines": 819,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:11",
+    "type": "测试-方程",
+    "expression": "3x = 12",
+    "result": "x = 4",
+    "status": "success",
+    "debug_lines": 836,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:11",
+    "type": "测试-方程",
+    "expression": "x-5=0",
+    "result": "x = 5",
+    "status": "success",
+    "debug_lines": 856,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:11",
+    "type": "测试-方程",
+    "expression": "x^2-5=0",
+    "result": "x = √(5) 或 -√(5)",
+    "status": "success",
+    "debug_lines": 877,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:11",
+    "type": "测试-方程",
+    "expression": "x^2+3x-1=0",
+    "result": "x = (-3+√(13))/(2) 或 (-3-√(13))/(2)",
+    "status": "success",
+    "debug_lines": 915,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:11",
+    "type": "测试-方程",
+    "expression": "x^2-5x+6=0",
+    "result": "x = 3 或 2",
+    "status": "success",
+    "debug_lines": 951,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:11",
+    "type": "测试-方程",
+    "expression": "x^2-6x+9=0",
+    "result": "x = 3",
+    "status": "success",
+    "debug_lines": 986,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:11",
+    "type": "测试-方程",
+    "expression": "2x^2-5x+2=0",
+    "result": "x = 2 或 1/2",
+    "status": "success",
+    "debug_lines": 1022,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:11",
+    "type": "测试-方程",
+    "expression": "x^2+3x+2=0",
+    "result": "x = -1 或 -2",
+    "status": "success",
+    "debug_lines": 1058,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:12",
+    "type": "测试-方程",
+    "expression": "x^2+8x+16=0",
+    "result": "x = -4",
+    "status": "success",
+    "debug_lines": 1093,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:12",
+    "type": "测试-方程",
+    "expression": "ax^2+c=0",
+    "result": "多变量方程的解:\n  a = -c/x^2\n  c = -ax^2\n  x = √(-c/a) 或 -√(-c/a)",
+    "status": "success",
+    "debug_lines": 1140,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:12",
+    "type": "测试-方程",
+    "expression": "ax^2+bx+c=0",
+    "result": "多变量方程的解:\n  a = -b/x-c/x^2\n  b = -ax-c/x\n  c = -ax^2-bx\n  x = (-b+√(-4ac+b^2))/(2a) 或 (-b-√(-4ac+b^2))/(2a)",
+    "status": "success",
+    "debug_lines": 1217,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:12",
+    "type": "测试-方程",
+    "expression": "1/(x+1) = 2",
+    "result": "x = -1/2",
+    "status": "success",
+    "debug_lines": 1249,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:12",
+    "type": "测试-方程",
+    "expression": "1/(x-1) = 0",
+    "result": "矛盾方程（无解）",
+    "status": "success",
+    "debug_lines": 1274,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:12",
+    "type": "测试-方程",
+    "expression": "(x^2-1)/(x-1) = 0",
+    "result": "x = -1",
+    "status": "success",
+    "debug_lines": 1316,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:13",
+    "type": "测试-方程",
+    "expression": "x/(x-2) = 3/(x-2)",
+    "result": "x = 3",
+    "status": "success",
+    "debug_lines": 1373,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:13",
+    "type": "测试-方程",
+    "expression": "1/x + 1/(x+1) = 1",
+    "result": "x = 1/2+1/2√(5) 或 1/2-1/2√(5)",
+    "status": "success",
+    "debug_lines": 1459,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:14",
+    "type": "测试-方程",
+    "expression": "x+y=10",
+    "result": "多变量方程的解:\n  x = -y+10\n  y = -x+10",
+    "status": "success",
+    "debug_lines": 1490,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:14",
+    "type": "测试-方程",
+    "expression": "(x+y)^2=0",
+    "result": "多变量方程的解:\n  x = -y\n  y = -x",
+    "status": "success",
+    "debug_lines": 1552,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:14",
+    "type": "测试-方程",
+    "expression": "1/(x+1) = 2/(y-1)",
+    "result": "多变量方程的解:\n  x = (1/2)y-3/2\n  y = 2x+3",
+    "status": "success",
+    "debug_lines": 1603,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:14",
+    "type": "测试-方程",
+    "expression": "(x+y)/(x-y) = 3",
+    "result": "多变量方程的解:\n  x = 2y\n  y = (1/2)x",
+    "status": "success",
+    "debug_lines": 1650,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:14",
+    "type": "测试-方程",
+    "expression": "1/x + 1/y = 1",
+    "result": "多变量方程的解:\n  x = y/(y-1)\n  y = x/(x-1)",
+    "status": "success",
+    "debug_lines": 1751,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:14",
+    "type": "测试-方程",
+    "expression": "1/x+1/y=1/(x+y)",
+    "result": "多变量方程的解:\n  x = 无实数解\n  y = 无实数解",
+    "status": "success",
+    "debug_lines": 1845,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:15",
+    "type": "测试-方程",
+    "expression": "1/x+1/y=5/(x+y)",
+    "result": "多变量方程的解:\n  x = (3/2)y+1/2√(5) 或 (3/2)y-1/2√(5)\n  y = (3/2)x+1/2√(5) 或 (3/2)x-1/2√(5)",
+    "status": "success",
+    "debug_lines": 1971,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:15",
+    "type": "测试-方程",
+    "expression": "x/y + y/x = xy",
+    "result": "多变量方程的解:\n  x = √((-y^2)/(-y^2+1)) 或 -√((-y^2)/(-y^2+1))\n  y = √((-x^2)/(-x^2+1)) 或 -√((-x^2)/(-x^2+1))",
+    "status": "success",
+    "debug_lines": 2074,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:16",
+    "type": "测试-方程",
+    "expression": "x/y + y/x = 4x^2y",
+    "result": "多变量方程的解:\n  x = 目前不支持求解这类方程，已化简：x^2/y-4x^3y+y\n  y = √((-x^2)/(-4x^3+1)) 或 -√((-x^2)/(-4x^3+1))",
+    "status": "success",
+    "debug_lines": 2157,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:16",
+    "type": "测试-方程",
+    "expression": "x+y=5; x-y=1",
+    "result": "x = 3, y = 2",
+    "status": "success",
+    "debug_lines": 2227,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:16",
+    "type": "测试-方程",
+    "expression": "x^2+y=5; x-y=1",
+    "result": "x = 2, y = 1 或 x = -3, y = -4",
+    "status": "success",
+    "debug_lines": 2519,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:16",
+    "type": "测试-方程",
+    "expression": "x+y=3; x-y=1; 2x=4",
+    "result": "x = 2, y = 1",
+    "status": "success",
+    "debug_lines": 2603,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:17",
+    "type": "测试-方程",
+    "expression": "x+y=3; x-y=1; 2x+y=4",
+    "result": "无解",
+    "status": "success",
+    "debug_lines": 2680,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:17",
+    "type": "测试-方程",
+    "expression": "x^2=4; y^2=9",
+    "result": "x = 2, y = 3 或 x = 2, y = -3 或 x = -2, y = 3 或 x = -2, y = -3",
+    "status": "success",
+    "debug_lines": 2839,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:18",
+    "type": "测试-方程",
+    "expression": "x^2=2; y=x+1",
+    "result": "x = √(2), y = 1+√(2) 或 x = -√(2), y = 1-√(2)",
+    "status": "success",
+    "debug_lines": 3126,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:18",
+    "type": "测试-方程",
+    "expression": "1/x + 1/y = 1; x+y=4",
+    "result": "x = 2, y = 2",
+    "status": "success",
+    "debug_lines": 3310,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:19",
+    "type": "测试-方程",
+    "expression": "x+y=3; x+y=5",
+    "result": "无解",
+    "status": "success",
+    "debug_lines": 3360,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:19",
+    "type": "测试-方程",
+    "expression": "x+y=3; 2x+2y=6; x=1",
+    "result": "x = 1, y = 2",
+    "status": "success",
+    "debug_lines": 3442,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:20",
+    "type": "测试-方程",
+    "expression": "x+y+a=0;x+y=2",
+    "result": "a = -2, x = -y+2",
+    "status": "success",
+    "debug_lines": 3519,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:20",
+    "type": "测试-方程",
+    "expression": "x + √(y) = 6; √(x) + y = 6",
+    "result": "无法求解，化简后的方程为：721y-204y^2+24y^3-y^4-900",
+    "status": "success",
+    "debug_lines": 3706,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:21",
+    "type": "测试-方程",
+    "expression": "√(x+y) = 3; x - y = 1",
+    "result": "x = 5, y = 4",
+    "status": "success",
+    "debug_lines": 3804,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:21",
+    "type": "测试-方程",
+    "expression": "√(x+1) = 2",
+    "result": "x = 3",
+    "status": "success",
+    "debug_lines": 3858,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:21",
+    "type": "测试-方程",
+    "expression": "√(x+5) = 1 + √(x)",
+    "result": "x = 4",
+    "status": "success",
+    "debug_lines": 3977,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:21",
+    "type": "测试-方程",
+    "expression": "√(2x+3) = x",
+    "result": "x = 3",
+    "status": "success",
+    "debug_lines": 4070,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:22",
+    "type": "测试-方程",
+    "expression": "√(x+7) - √(x) = 1",
+    "result": "x = 9",
+    "status": "success",
+    "debug_lines": 4196,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:22",
+    "type": "测试-方程",
+    "expression": "√(x) + √(x+3) = 3",
+    "result": "x = 1",
+    "status": "success",
+    "debug_lines": 4320,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:23",
+    "type": "测试-方程",
+    "expression": "√(x) = -2",
+    "result": "无解",
+    "status": "success",
+    "debug_lines": 4376,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:23",
+    "type": "测试-方程",
+    "expression": "√(x-3) + √(x+2) = 0",
+    "result": "无解",
+    "status": "success",
+    "debug_lines": 4431,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:23",
+    "type": "测试-方程",
+    "expression": "√(x) + 1 = 0",
+    "result": "无解",
+    "status": "success",
+    "debug_lines": 4493,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:23",
+    "type": "测试-方程",
+    "expression": "√(x-1) = √(1-x)",
+    "result": "无解",
+    "status": "success",
+    "debug_lines": 4572,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:23",
+    "type": "测试-方程",
+    "expression": "√(x^2+1) = -2",
+    "result": "无解",
+    "status": "success",
+    "debug_lines": 4677,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:24",
+    "type": "测试-方程",
+    "expression": "|x|=2",
+    "result": "x = 2 或 -2",
+    "status": "success",
+    "debug_lines": 4740,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:24",
+    "type": "测试-方程",
+    "expression": "|x-1|=3",
+    "result": "x = 4 或 -2",
+    "status": "success",
+    "debug_lines": 4813,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:24",
+    "type": "测试-方程",
+    "expression": "|x|+|y|=1",
+    "result": "当 x ≥ 0 且 y ≥ 0 时，解为：x = -y+1, y = -x+1\n当 x ≥ 0 且 y < 0 时，解为：x = y+1, y = x-1\n当 x < 0 且 y ≥ 0 时，解为：x = y-1, y = x+1\n当 x < 0 且 y < 0 时，解为：x = -y-1, y = -x-1",
+    "status": "success",
+    "debug_lines": 5030,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-27 13:09:25",
+    "type": "测试-方程",
+    "expression": "|x+1|=y",
+    "result": "当 x+1 ≥ 0 时，解为：x = y-1, y = x+1\n当 x+1 < 0 时，解为：x = -y-1, y = -x-1",
+    "status": "success",
+    "debug_lines": 5139,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-28 10:13:35",
+    "type": "方程求解",
+    "expression": "-2(a+b)=ab",
+    "result": "多变量方程的解:\n  a = (-2b)/(b+2)\n  b = (-2a)/(a+2)",
+    "status": "success",
+    "debug_lines": 54,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-28 10:17:09",
+    "type": "方程求解",
+    "expression": "k=(4-0)/(2-x)",
+    "result": "多变量方程的解:\n  k = (-4)/(x-2)\n  x = -4/k+2",
+    "status": "success",
+    "debug_lines": 61,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-28 10:17:25",
+    "type": "方程求解",
+    "expression": "-1/k=(4-0)/(2-x)",
+    "result": "多变量方程的解:\n  k = (1/4)x-1/2\n  x = 4k+2",
+    "status": "success",
+    "debug_lines": 85,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-28 10:18:06",
+    "type": "方程求解",
+    "expression": "-1/k=(4-0)/(2-x)",
+    "result": "多变量方程的解:\n  k = (1/4)x-1/2\n  x = 4k+2",
+    "status": "success",
+    "debug_lines": 497,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-28 10:18:13",
+    "type": "方程求解",
+    "expression": "-1/k=(4-0)/(2-x)",
+    "result": "多变量方程的解:\n  k = (1/4)x-1/2\n  x = 4k+2",
+    "status": "success",
+    "debug_lines": 43,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-28 10:18:15",
+    "type": "方程求解",
+    "expression": "-1/k=(4-0)/(2-x)",
+    "result": "多变量方程的解:\n  k = (1/4)x-1/2\n  x = 4k+2",
+    "status": "success",
+    "debug_lines": 85,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-28 10:23:14",
+    "type": "方程求解",
+    "expression": "(3-a)/(a+3)=(3-a-3)/(a-1-a)",
+    "result": "a = -2+√(7) 或 -2-√(7)",
+    "status": "success",
+    "debug_lines": 80,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-28 10:26:07",
+    "type": "方程组求解",
+    "expression": "(3-a)/(a+3)=(3-a-3)/(a-1-a);(y-a)/(a-3)=(x+3)/(-3-a)",
+    "result": "无解",
+    "status": "success",
+    "debug_lines": 92,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-28 10:26:12",
+    "type": "方程组求解",
+    "expression": "(3-a)/(a+3)=(3-a-3)/(a-1-a);(y-a)/(a-3)=(x+3)/(-3-a)",
+    "result": "无解",
+    "status": "success",
+    "debug_lines": 92,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-28 10:26:33",
+    "type": "方程组求解",
+    "expression": "(3-a)/(a+3)=(3-a-3)/(a-1-a);(y-a)/(a-3)=(x+3)/(-3-a)",
+    "result": "无解",
+    "status": "success",
+    "debug_lines": 92,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-28 10:26:46",
+    "type": "方程组求解",
+    "expression": "(3-a)/(a+3)=(3-a-3)/(a-1-a);(y-a)/(a-3)=(x+3)/(-3-a)",
+    "result": "无解",
+    "status": "success",
+    "debug_lines": 668,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-28 10:27:31",
+    "type": "表达式化简",
+    "expression": "(y-(-2+√(7))/(-2+√(7)-3)",
+    "result": "括号不匹配: 未闭合的左括号",
+    "status": "error",
+    "debug_lines": 16,
+    "error": "括号不匹配: 未闭合的左括号"
+  },
+  {
+    "timestamp": "2026-02-28 10:27:40",
+    "type": "表达式化简",
+    "expression": "(y-(-2+√(7)))/(-2+√(7)-3)",
+    "result": "(y+2-√(7))/(-5+√(7))",
+    "status": "success",
+    "debug_lines": 432,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-28 10:27:42",
+    "type": "表达式化简",
+    "expression": "(y-(-2+√(7)))/(-2+√(7)-3)",
+    "result": "(y+2-√(7))/(-5+√(7))",
+    "status": "success",
+    "debug_lines": 432,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-28 10:27:43",
+    "type": "表达式化简",
+    "expression": "(y-(-2+√(7)))/(-2+√(7)-3)",
+    "result": "(y+2-√(7))/(-5+√(7))",
+    "status": "success",
+    "debug_lines": 432,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-28 10:27:43",
+    "type": "表达式化简",
+    "expression": "(y-(-2+√(7)))/(-2+√(7)-3)",
+    "result": "(y+2-√(7))/(-5+√(7))",
+    "status": "success",
+    "debug_lines": 432,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-28 10:29:01",
+    "type": "方程组求解",
+    "expression": "-2/a+1/b=1;a+b=4",
+    "result": "a = (-7-√(33))/(5/2+1/2√(33)), b = 7/2+1/2√(33) 或 a = (-7+√(33))/(5/2-1/2√(33)), b = 7/2-1/2√(33)",
+    "status": "success",
+    "debug_lines": 394,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-28 10:30:09",
+    "type": "方程组求解",
+    "expression": "-2/a+1/b=1;a+b=4;x/a+y/b=1",
+    "result": "方程组求解错误: 'FractionExpression' object has no attribute 'contains_var'",
+    "status": "success",
+    "debug_lines": 161,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-28 10:30:19",
+    "type": "方程组求解",
+    "expression": "-2/a+1/b=1;a+b=4;x/a+y/b=1",
+    "result": "方程组求解错误: 'FractionExpression' object has no attribute 'contains_var'",
+    "status": "success",
+    "debug_lines": 169,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-28 10:30:30",
+    "type": "方程组求解",
+    "expression": "-2/a+1/b=1;a+b=4;x/a+y/b=1",
+    "result": "方程组求解错误: 'FractionExpression' object has no attribute 'contains_var'",
+    "status": "success",
+    "debug_lines": 169,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-28 10:30:56",
+    "type": "方程组求解",
+    "expression": "-2/a+1/b=1;a+b=4",
+    "result": "a = (-7-√(33))/(5/2+1/2√(33)), b = 7/2+1/2√(33) 或 a = (-7+√(33))/(5/2-1/2√(33)), b = 7/2-1/2√(33)",
+    "status": "success",
+    "debug_lines": 394,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-28 10:39:26",
+    "type": "方程组求解",
+    "expression": "(a-2)^2+(b+2)^2;a-3b=0",
+    "result": "方程组求解错误: 方程 '(a-2)^2+(b+2)^2' 不含等号",
+    "status": "success",
+    "debug_lines": 2,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-28 10:48:59",
+    "type": "方程求解",
+    "expression": "|5x-y-12|=|x-5y+12|",
+    "result": "当 5x-y-12 ≥ 0 且 -x+5y-12 ≥ 0 时，解为：x = -y+6, y = -x+6\n当 5x-y-12 ≥ 0 且 -x+5y-12 < 0 时，解为：x = y, y = x\n当 5x-y-12 < 0 且 -x+5y-12 ≥ 0 时，解为：x = y, y = x\n当 5x-y-12 < 0 且 -x+5y-12 < 0 时，解为：x = -y+6, y = -x+6",
+    "status": "success",
+    "debug_lines": 207,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-28 11:12:07",
+    "type": "方程组求解",
+    "expression": "y-3=k(x-2);3x+4y-7=0",
+    "result": "方程组求解错误: 无法识别的表达式: k(x-2)",
+    "status": "success",
+    "debug_lines": 13,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-28 11:12:21",
+    "type": "方程组求解",
+    "expression": "y-3=k*(x-2);3x+4y-7=0",
+    "result": "x = (8k-5)/(4k+3), y = (k+9)/(4k+3)",
+    "status": "success",
+    "debug_lines": 183,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-28 11:16:43",
+    "type": "方程求解",
+    "expression": "(y+1)/(-1+12/5)=(x+1)/(-1-19/5)",
+    "result": "多变量方程的解:\n  x = (-24/175)y-199/175\n  y = (-175/24)x-199/24",
+    "status": "success",
+    "debug_lines": 57,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-28 11:17:13",
+    "type": "方程求解",
+    "expression": "7x+24y+31=0",
+    "result": "多变量方程的解:\n  x = (-24/7)y-31/7\n  y = (-7/24)x-31/24",
+    "status": "success",
+    "debug_lines": 32,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-28 11:17:27",
+    "type": "表达式化简",
+    "expression": "(y+1)/(-1+12/5)",
+    "result": "(1/35)y+1/35",
+    "status": "success",
+    "debug_lines": 23,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-28 11:17:40",
+    "type": "方程求解",
+    "expression": "(y+1)/(-1+12/5)=(1+x)/(-1-19/5)",
+    "result": "多变量方程的解:\n  x = (-24/175)y-199/175\n  y = (-175/24)x-199/24",
+    "status": "success",
+    "debug_lines": 57,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-28 11:17:46",
+    "type": "方程求解",
+    "expression": "(y+1)/(-1+12/5)=(1+x)/(-1+19/5)",
+    "result": "多变量方程的解:\n  x = 2y+1\n  y = (1/2)x-1/2",
+    "status": "success",
+    "debug_lines": 53,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-28 11:17:49",
+    "type": "方程求解",
+    "expression": "(y+1)/(-1+12/5)=(1+x)/(-1-19/5)",
+    "result": "多变量方程的解:\n  x = (-24/175)y-199/175\n  y = (-175/24)x-199/24",
+    "status": "success",
+    "debug_lines": 57,
+    "error": null
+  },
+  {
+    "timestamp": "2026-02-28 11:18:27",
+    "type": "表达式化简",
+    "expression": "(1+x)/(-1-19/5)",
+    "result": "(-5/24)x-5/24",
+    "status": "success",
+    "debug_lines": 27,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:08",
+    "type": "测试-表达式",
+    "expression": "(2x)/2",
+    "result": "x",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:08",
+    "type": "测试-表达式",
+    "expression": "2x+3x",
+    "result": "5x",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:08",
+    "type": "测试-表达式",
+    "expression": "a+b-(a-b)",
+    "result": "2b",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:08",
+    "type": "测试-表达式",
+    "expression": "x*x",
+    "result": "x^2",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:08",
+    "type": "测试-表达式",
+    "expression": "x/2 + x/2",
+    "result": "x",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:08",
+    "type": "测试-表达式",
+    "expression": "3*(x+y) - 2*(x+y)",
+    "result": "x+y",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:08",
+    "type": "测试-表达式",
+    "expression": "1/2/3/4/5/6/7/8/9",
+    "result": "1/362880",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:09",
+    "type": "测试-表达式",
+    "expression": "2*(a+b)",
+    "result": "2a+2b",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:09",
+    "type": "测试-表达式",
+    "expression": "(a+b)(c+d)",
+    "result": "ac+ad+bc+bd",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:09",
+    "type": "测试-表达式",
+    "expression": "(x+y)(x-y)",
+    "result": "x^2-y^2",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:09",
+    "type": "测试-表达式",
+    "expression": "(a+b)^2",
+    "result": "2ab+a^2+b^2",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:09",
+    "type": "测试-表达式",
+    "expression": "((2x)^2)",
+    "result": "4x^2",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:09",
+    "type": "测试-表达式",
+    "expression": "(8x^3)^(1/2)",
+    "result": "2x√(2x)",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:09",
+    "type": "测试-表达式",
+    "expression": "√(4)",
+    "result": "2",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:09",
+    "type": "测试-表达式",
+    "expression": "1/√(x+1)",
+    "result": "(√(x+1))/(x+1)",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:09",
+    "type": "测试-表达式",
+    "expression": "1/(x+1)+1",
+    "result": "(x+2)/(x+1)",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:09",
+    "type": "测试-表达式",
+    "expression": "1/(x+1)+x/(1+x)",
+    "result": "1",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:09",
+    "type": "测试-表达式",
+    "expression": "2/3*x",
+    "result": "(2/3)x",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:09",
+    "type": "测试-表达式",
+    "expression": "1/2x",
+    "result": "(1/2)x",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:10",
+    "type": "测试-表达式",
+    "expression": "(1/x)*x",
+    "result": "1",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:10",
+    "type": "测试-表达式",
+    "expression": "(1/(x+1))*(x+1)",
+    "result": "1",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:10",
+    "type": "测试-表达式",
+    "expression": "(3x/y)*y",
+    "result": "3x",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:10",
+    "type": "测试-表达式",
+    "expression": "a+√(b)",
+    "result": "a+√(b)",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:10",
+    "type": "测试-表达式",
+    "expression": "a-√(b)",
+    "result": "a-√(b)",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:10",
+    "type": "测试-表达式",
+    "expression": "a√(b)",
+    "result": "a√(b)",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:10",
+    "type": "测试-表达式",
+    "expression": "√(-4)",
+    "result": "√(-4)",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:10",
+    "type": "测试-表达式",
+    "expression": "√(-4c^2+8d)",
+    "result": "2√(-c^2+2d)",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:10",
+    "type": "测试-表达式",
+    "expression": "√(4x^2+8)",
+    "result": "2√(x^2+2)",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:10",
+    "type": "测试-表达式",
+    "expression": "√(8x^2+16y^2)",
+    "result": "2√(2x^2+4y^2)",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:10",
+    "type": "测试-表达式",
+    "expression": "√(9a^2+18b)",
+    "result": "3√(a^2+2b)",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:10",
+    "type": "测试-表达式",
+    "expression": "√(12a+18b)",
+    "result": "√(12a+18b)",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:10",
+    "type": "测试-表达式",
+    "expression": "√(36x+48y)",
+    "result": "2√(9x+12y)",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:10",
+    "type": "测试-表达式",
+    "expression": "(x^2-1)/(x-1)",
+    "result": "x+1",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:10",
+    "type": "测试-表达式",
+    "expression": "(x^2+2x+1)/(x+1)",
+    "result": "x+1",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:11",
+    "type": "测试-表达式",
+    "expression": "(x^2-y^2)/(x-y)",
+    "result": "x+y",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:11",
+    "type": "测试-表达式",
+    "expression": "(x^2-4)/(x^2-x-2)",
+    "result": "(x+2)/(x+1)",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:11",
+    "type": "测试-表达式",
+    "expression": "(x^3-1)/(x-1)",
+    "result": "x+x^2+1",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:11",
+    "type": "测试-表达式",
+    "expression": "(a^2-b^2)/(a+b)",
+    "result": "a-b",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:11",
+    "type": "测试-表达式",
+    "expression": "1/(√(2)+1)",
+    "result": "-1+√(2)",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:11",
+    "type": "测试-表达式",
+    "expression": "1/(√(2)-1)",
+    "result": "1+√(2)",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:11",
+    "type": "测试-表达式",
+    "expression": "1/(2+√(3))",
+    "result": "2-√(3)",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:11",
+    "type": "测试-表达式",
+    "expression": "1/(1+√(x))",
+    "result": "(1-√(x))/(-x+1)",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:11",
+    "type": "测试-表达式",
+    "expression": "1/(√(x+1)-1)",
+    "result": "(-1-√(x+1))/(-x)",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:11",
+    "type": "测试-表达式",
+    "expression": "1/(√(x)+1)",
+    "result": "(1-√(x))/(-x+1)",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:11",
+    "type": "测试-表达式",
+    "expression": "1/(x+y+√(x+y))",
+    "result": "(x+y-√(x+y))/(-x+2xy+x^2-y+y^2)",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:11",
+    "type": "测试-表达式",
+    "expression": "(-b+√(b^2-4a*c))/(2a)",
+    "result": "(-b+√(-4ac+b^2))/2a",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:11",
+    "type": "测试-表达式",
+    "expression": "(k^2+(2a-k)^2-4*(a^2-b^2))/(2k*(2a-k))",
+    "result": "(-2ak+2b^2+k^2)/(2ak-k^2)",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:11",
+    "type": "测试-表达式",
+    "expression": "(x-(a+b)/2)^2",
+    "result": "(1/2)ab-ax+(1/4)a^2-bx+(1/4)b^2+x^2",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:12",
+    "type": "测试-表达式",
+    "expression": "(x-((a+b)/2))^2+(y-((c+d)/2))^2",
+    "result": "(1/2)ab-ax+(1/4)a^2-bx+(1/4)b^2+(1/2)cd-cy+(1/4)c^2-dy+(1/4)d^2+x^2+y^2",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:12",
+    "type": "测试-表达式",
+    "expression": "(x-((a+b)/2))^2+(y-((c+d)/2))^2-0.25*((a-b)^2+(c-d)^2)",
+    "result": "ab-ax-bx+cd-cy-dy+x^2+y^2",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:12",
+    "type": "测试-表达式",
+    "expression": "|3|",
+    "result": "3",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:12",
+    "type": "测试-表达式",
+    "expression": "|-5|",
+    "result": "5",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:12",
+    "type": "测试-表达式",
+    "expression": "|0|",
+    "result": "0",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:12",
+    "type": "测试-表达式",
+    "expression": "|x|",
+    "result": "|x|",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:12",
+    "type": "测试-表达式",
+    "expression": "2*|x|",
+    "result": "|2x|",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:12",
+    "type": "测试-表达式",
+    "expression": "x*|y|",
+    "result": "|xy|",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:12",
+    "type": "测试-表达式",
+    "expression": "|x|+|x|",
+    "result": "|2x|",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:12",
+    "type": "测试-表达式",
+    "expression": "|x+1|",
+    "result": "|(x+1)|",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:12",
+    "type": "测试-表达式",
+    "expression": "(1/2)*|x|",
+    "result": "|(1/2)x|",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:12",
+    "type": "测试-方程",
+    "expression": "x+2=5",
+    "result": "x = 3",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:12",
+    "type": "测试-方程",
+    "expression": "2x=8",
+    "result": "x = 4",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:12",
+    "type": "测试-方程",
+    "expression": "3x-6=0",
+    "result": "x = 2",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:12",
+    "type": "测试-方程",
+    "expression": "2x+3=7",
+    "result": "x = 2",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:13",
+    "type": "测试-方程",
+    "expression": "x/2 = 3",
+    "result": "x = 6",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:13",
+    "type": "测试-方程",
+    "expression": "3x = 12",
+    "result": "x = 4",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:13",
+    "type": "测试-方程",
+    "expression": "x-5=0",
+    "result": "x = 5",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:13",
+    "type": "测试-方程",
+    "expression": "x^2-5=0",
+    "result": "x = √(5) 或 -√(5)",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:13",
+    "type": "测试-方程",
+    "expression": "x^2+3x-1=0",
+    "result": "x = (-3+√(13))/(2) 或 (-3-√(13))/(2)",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:13",
+    "type": "测试-方程",
+    "expression": "x^2-5x+6=0",
+    "result": "x = 3 或 2",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:13",
+    "type": "测试-方程",
+    "expression": "x^2-6x+9=0",
+    "result": "x = 3",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:13",
+    "type": "测试-方程",
+    "expression": "2x^2-5x+2=0",
+    "result": "x = 2 或 1/2",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:13",
+    "type": "测试-方程",
+    "expression": "x^2+3x+2=0",
+    "result": "x = -1 或 -2",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:13",
+    "type": "测试-方程",
+    "expression": "x^2+8x+16=0",
+    "result": "x = -4",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:13",
+    "type": "测试-方程",
+    "expression": "ax^2+c=0",
+    "result": "多变量方程的解:\n  a = -c/x^2\n  c = -ax^2\n  x = √(-c/a) 或 -√(-c/a)",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:13",
+    "type": "测试-方程",
+    "expression": "ax^2+bx+c=0",
+    "result": "多变量方程的解:\n  a = -b/x-c/x^2\n  b = -ax-c/x\n  c = -ax^2-bx\n  x = (-b+√(-4ac+b^2))/(2a) 或 (-b-√(-4ac+b^2))/(2a)",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:13",
+    "type": "测试-方程",
+    "expression": "1/(x+1) = 2",
+    "result": "x = -1/2",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:13",
+    "type": "测试-方程",
+    "expression": "1/(x-1) = 0",
+    "result": "矛盾方程（无解）",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:13",
+    "type": "测试-方程",
+    "expression": "(x^2-1)/(x-1) = 0",
+    "result": "x = -1",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:13",
+    "type": "测试-方程",
+    "expression": "x/(x-2) = 3/(x-2)",
+    "result": "x = 3",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:14",
+    "type": "测试-方程",
+    "expression": "1/x + 1/(x+1) = 1",
+    "result": "x = 1/2+(√(5))/2 或 1/2-(√(5))/2",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:14",
+    "type": "测试-方程",
+    "expression": "x+y=10",
+    "result": "多变量方程的解:\n  x = -y+10\n  y = -x+10",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:14",
+    "type": "测试-方程",
+    "expression": "(x+y)^2=0",
+    "result": "多变量方程的解:\n  x = -y\n  y = -x",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:14",
+    "type": "测试-方程",
+    "expression": "1/(x+1) = 2/(y-1)",
+    "result": "多变量方程的解:\n  x = (1/2)y-3/2\n  y = 2x+3",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:14",
+    "type": "测试-方程",
+    "expression": "(x+y)/(x-y) = 3",
+    "result": "多变量方程的解:\n  x = 2y\n  y = (1/2)x",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:14",
+    "type": "测试-方程",
+    "expression": "1/x + 1/y = 1",
+    "result": "多变量方程的解:\n  x = y/(y-1)\n  y = x/(x-1)",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:14",
+    "type": "测试-方程",
+    "expression": "1/x+1/y=1/(x+y)",
+    "result": "多变量方程的解:\n  x = 无实数解\n  y = 无实数解",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:14",
+    "type": "测试-方程",
+    "expression": "1/x+1/y=5/(x+y)",
+    "result": "多变量方程的解:\n  x = (3/2+(√(5))/2)/y 或 (3/2-(√(5))/2)/y\n  y = (3/2+(√(5))/2)/x 或 (3/2-(√(5))/2)/x",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:14",
+    "type": "测试-方程",
+    "expression": "x/y + y/x = xy",
+    "result": "多变量方程的解:\n  x = √((-y^2)/(-y^2+1)) 或 -√((-y^2)/(-y^2+1))\n  y = √((-x^2)/(-x^2+1)) 或 -√((-x^2)/(-x^2+1))",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:14",
+    "type": "测试-方程",
+    "expression": "x/y + y/x = 4x^2y",
+    "result": "多变量方程的解:\n  x = 目前不支持求解这类方程，已化简：x^2/y-4x^3y+y\n  y = √((-x^2)/(-4x^3+1)) 或 -√((-x^2)/(-4x^3+1))",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:14",
+    "type": "测试-方程",
+    "expression": "x+y=5; x-y=1",
+    "result": "x = 3, y = 2",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:14",
+    "type": "测试-方程",
+    "expression": "x^2+y=5; x-y=1",
+    "result": "x = 2, y = 1 或 x = -3, y = -4",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:14",
+    "type": "测试-方程",
+    "expression": "x+y=3; x-y=1; 2x=4",
+    "result": "x = 2, y = 1",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:14",
+    "type": "测试-方程",
+    "expression": "x+y=3; x-y=1; 2x+y=4",
+    "result": "无解",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:14",
+    "type": "测试-方程",
+    "expression": "x^2=4; y^2=9",
+    "result": "x = 2, y = 3 或 x = 2, y = -3 或 x = -2, y = 3 或 x = -2, y = -3",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:15",
+    "type": "测试-方程",
+    "expression": "x^2=2; y=x+1",
+    "result": "x = √(2), y = 1+√(2) 或 x = -√(2), y = 1-√(2)",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:15",
+    "type": "测试-方程",
+    "expression": "1/x + 1/y = 1; x+y=4",
+    "result": "x = 2, y = 2",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:15",
+    "type": "测试-方程",
+    "expression": "x+y=3; x+y=5",
+    "result": "无解",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:15",
+    "type": "测试-方程",
+    "expression": "x+y=3; 2x+2y=6; x=1",
+    "result": "x = 1, y = 2",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:15",
+    "type": "测试-方程",
+    "expression": "x+y+a=0;x+y=2",
+    "result": "a = -2, x = -y+2",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:15",
+    "type": "测试-方程",
+    "expression": "x + √(y) = 6; √(x) + y = 6",
+    "result": "无法求解，化简后的方程为：721y-204y^2+24y^3-y^4-900",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:15",
+    "type": "测试-方程",
+    "expression": "√(x+y) = 3; x - y = 1",
+    "result": "x = 5, y = 4",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:15",
+    "type": "测试-方程",
+    "expression": "x+y=c; x^2+y^2=d",
+    "result": "x = (1/2)c-(√(-c^2+2d))/2, y = (1/2)c+(√(-c^2+2d))/2 或 x = (1/2)c+(√(-c^2+2d))/2, y = (1/2)c-(√(-c^2+2d))/2",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:15",
+    "type": "测试-方程",
+    "expression": "√(x+1) = 2",
+    "result": "x = 3",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:15",
+    "type": "测试-方程",
+    "expression": "√(x+5) = 1 + √(x)",
+    "result": "x = 4",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:15",
+    "type": "测试-方程",
+    "expression": "√(2x+3) = x",
+    "result": "x = 3",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:15",
+    "type": "测试-方程",
+    "expression": "√(x+7) - √(x) = 1",
+    "result": "x = 9",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:15",
+    "type": "测试-方程",
+    "expression": "√(x) + √(x+3) = 3",
+    "result": "x = 1",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:15",
+    "type": "测试-方程",
+    "expression": "√(x) = -2",
+    "result": "无解",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:15",
+    "type": "测试-方程",
+    "expression": "√(x-3) + √(x+2) = 0",
+    "result": "无解",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:15",
+    "type": "测试-方程",
+    "expression": "√(x) + 1 = 0",
+    "result": "无解",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:16",
+    "type": "测试-方程",
+    "expression": "√(x-1) = √(1-x)",
+    "result": "x = 1",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:16",
+    "type": "测试-方程",
+    "expression": "√(x^2+1) = -2",
+    "result": "无解",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:16",
+    "type": "测试-方程",
+    "expression": "|x|=2",
+    "result": "x = 2 或 -2",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:16",
+    "type": "测试-方程",
+    "expression": "|x-1|=3",
+    "result": "x = 4 或 -2",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:16",
+    "type": "测试-方程",
+    "expression": "|x|+|y|=1",
+    "result": "当 x ≥ 0 且 y ≥ 0 时，解为：x = -y+1\n当 x ≥ 0 且 y < 0 时，解为：x = y+1\n当 x < 0 且 y ≥ 0 时，解为：x = y-1\n当 x < 0 且 y < 0 时，解为：x = -y-1",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:16",
+    "type": "测试-方程",
+    "expression": "|x+1|=y",
+    "result": "当 x+1 ≥ 0 时，解为：x = y-1\n当 x+1 < 0 时，解为：x = -y-1",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:16",
+    "type": "测试-方程",
+    "expression": "x^2+y^2=r^2; x+y=0",
+    "result": "x = -r√(1/2), y = r√(1/2) 或 x = r√(1/2), y = -r√(1/2)",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:16",
+    "type": "测试-方程",
+    "expression": "|x+y|=4; x^2+y^2=9",
+    "result": "x = 2-(√(2))/2, y = 2+(√(2))/2 或 x = 2+(√(2))/2, y = 2-(√(2))/2 或 x = -2-(√(2))/2, y = -2+(√(2))/2 或 x = -2+(√(2))/2, y = -2-(√(2))/2",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:16",
+    "type": "测试-方程",
+    "expression": "x^2+y^2-4x=9; x=y-1",
+    "result": "x = 1/2+(√(17))/2, y = 3/2+(√(17))/2 或 x = 1/2-(√(17))/2, y = 3/2-(√(17))/2",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:16",
+    "type": "测试-方程",
+    "expression": "x^2+y^2+4x-4y=0; x^2+y^2+2x-12=0",
+    "result": "x = -2+4√(2/5), y = 2+(2√(10))/5 或 x = -2-4√(2/5), y = 2-(2√(10))/5",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:16",
+    "type": "测试-方程",
+    "expression": "x^2/4+y^2=1; y=x",
+    "result": "x = 2√(1/5), y = 2√(1/5) 或 x = -2√(1/5), y = -2√(1/5)",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:16",
+    "type": "测试-方程",
+    "expression": "√(x^2+1) + √(x^2+1) = 2",
+    "result": "x = 0",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:16",
+    "type": "测试-方程",
+    "expression": "x^2+y^2=9; x=y",
+    "result": "x = 3√(1/2), y = 3√(1/2) 或 x = -3√(1/2), y = -3√(1/2)",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:16",
+    "type": "测试-方程",
+    "expression": "x^2+y^2=9; x=y-2",
+    "result": "x = -1+(√(14))/2, y = 1+(√(14))/2 或 x = -1-(√(14))/2, y = 1-(√(14))/2",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:16",
+    "type": "测试-方程",
+    "expression": "x^2+y^2=9; x=y-1",
+    "result": "x = -1/2+(√(17))/2, y = 1/2+(√(17))/2 或 x = -1/2-(√(17))/2, y = 1/2-(√(17))/2",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:17",
+    "type": "测试-其他",
+    "expression": "x^2-1",
+    "result": "(x-1)(x+1)",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:17",
+    "type": "测试-其他",
+    "expression": "x^2+2x+1",
+    "result": "(x+1)^2",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:17",
+    "type": "测试-其他",
+    "expression": "x^2-y^2",
+    "result": "(x-y)(x+y)",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:17",
+    "type": "测试-其他",
+    "expression": "x^3-y^3",
+    "result": "(x-y)(x^2+xy+y^2)",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:17",
+    "type": "测试-其他",
+    "expression": "2x^2+4x",
+    "result": "2x(x+2)",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:17",
+    "type": "测试-其他",
+    "expression": "x^2+5x+6",
+    "result": "(x+2)(x+3)",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:17",
+    "type": "测试-其他",
+    "expression": "xy+yz",
+    "result": "y(x+z)",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:17",
+    "type": "测试-其他",
+    "expression": "x^2+xy+xz+yz",
+    "result": "(x+y)(x+z)",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:17",
+    "type": "测试-其他",
+    "expression": "x^3+3x^2+3x+1",
+    "result": "(x+1)^3",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:17",
+    "type": "测试-其他",
+    "expression": "4x^2-9",
+    "result": "(2x-3)(2x+3)",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:17",
+    "type": "测试-其他",
+    "expression": "a^2-b^2",
+    "result": "(a-b)(a+b)",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:17",
+    "type": "测试-其他",
+    "expression": "x^2+3x+2",
+    "result": "(x+1)(x+2)",
+    "status": "success",
+    "debug_lines": 0,
+    "error": null
+  },
+  {
+    "timestamp": "2026-05-31 06:28:34",
+    "type": "方程求解",
+    "expression": "x/y + y/x = 4x^2y",
+    "result": "多变量方程的解:\n  x = 目前不支持求解这类方程，已化简：x^2/y-4x^3y+y\n  y = √((-x^2)/(-4x^3+1)) 或 -√((-x^2)/(-4x^3+1))",
+    "status": "success",
+    "debug_lines": 142,
+    "error": null
+  }
+]
