@@ -941,6 +941,100 @@ class AlgebraicCalculator:
                 debug_callback("详细堆栈信息:\n" + traceback.format_exc(), level=1)
             raise e
 
+    def factor_expression(self, expr, debug_callback=None):
+        """因式分解表达式：先化简，再对结果进行因式分解"""
+        try:
+            if ';' in expr:
+                raise ValueError("因式分解不支持方程组，请使用解方程功能")
+            if '=' in expr:
+                raise ValueError("因式分解不支持方程，请只输入表达式")
+
+            if debug_callback:
+                debug_callback(f"开始因式分解: {expr}", level=1)
+
+            # 第一步：化简
+            expr_obj = self.parse_expression(expr, debug_callback)
+            if hasattr(expr_obj, 'simplify'):
+                simplified = expr_obj.simplify(debug_callback)
+            else:
+                simplified = expr_obj
+
+            # 如果结果是分式且分母含根号，进行有理化
+            if isinstance(simplified, FractionExpression) and self._contains_sqrt(simplified.denominator):
+                from algebra_expression import DenominatorRationalizer
+                rationalizer = DenominatorRationalizer()
+                simplified = rationalizer.rationalize(simplified, debug_callback)
+                if hasattr(simplified, 'simplify'):
+                    simplified = simplified.simplify(debug_callback)
+
+            # 第二步：转为 sympy 格式进行因式分解
+            simplified_str = str(simplified).replace('+-', '-').replace('--', '+')
+            sp_expr_str = self._to_sympy_string(simplified_str)
+
+            import sympy as sp
+            sp_expr = sp.sympify(sp_expr_str)
+            factored = sp.factor(sp_expr)
+            result = str(factored)
+
+            # 将 sympy 格式转回计算器格式
+            result = result.replace('**', '^')
+            result = result.replace('sqrt', '√')
+            result = result.replace('*', '')
+            result = result.replace(' ', '')  # 去掉空格
+
+            if debug_callback:
+                debug_callback(f"因式分解结果: {result}", level=1)
+            return result
+        except ValueError:
+            raise
+        except Exception as e:
+            if debug_callback:
+                import traceback
+                debug_callback(f"因式分解出错: {str(e)}", level=1)
+                debug_callback("详细堆栈信息:\n" + traceback.format_exc(), level=1)
+            return f"因式分解失败: {str(e)}"
+
+    def _to_sympy_string(self, s):
+        """将计算器格式的表达式字符串转为 sympy 可识别的格式"""
+        import re
+        s = s.replace(' ', '')
+        sqrt_char = '√'
+        while sqrt_char + '(' in s:
+            s = re.sub(sqrt_char + r'\(([^()]+)\)', r'sqrt(\1)', s)
+        # ^ → **
+        s = s.replace('^', '**')
+        # 隐式乘法：数字后跟字母 → 数字*字母
+        s = re.sub(r'(\d)([a-zA-Z])', r'\1*\2', s)
+        # 数字后跟 ( → 数字*(
+        s = re.sub(r'(\d)\(', r'\1*(', s)
+        # )后跟数字或字母 → )*X
+        s = re.sub(r'\)(\d)', r')*\1', s)
+        s = re.sub(r'\)([a-zA-Z])', r')*\1', s)
+        # 字母之间隐式乘法：仅在非 sqrt 的字母间插入 *
+        # 方法：找到所有连续字母块，如果块不是 "sqrt"，则插入 *
+        def _insert_letter_mul(s):
+            result = []
+            i = 0
+            while i < len(s):
+                if s[i:i+4] == 'sqrt':
+                    result.append('sqrt')
+                    i += 4
+                elif s[i].isalpha():
+                    start = i
+                    while i < len(s) and s[i].isalpha():
+                        i += 1
+                    block = s[start:i]
+                    if block != 'sqrt':
+                        result.append('*'.join(block))
+                    else:
+                        result.append(block)
+                else:
+                    result.append(s[i])
+                    i += 1
+            return ''.join(result)
+        s = _insert_letter_mul(s)
+        return s
+
     def _collect_variables(self, expr):
         """递归收集表达式中的所有变量名"""
         vars_set = set()
@@ -1546,12 +1640,26 @@ class AlgebraicCalculator:
                 debug_callback(traceback.format_exc(), level=1)
             return f"方程组求解错误: {str(e)}"
 
+    def _is_identity_expr(self, expr, var):
+        """判断表达式是否就是该变量自身（系数1、次数1、无其他变量）"""
+        if isinstance(expr, AlgebraicExpression) and len(expr.terms) == 1:
+            term = expr.terms[0]
+            if isinstance(term, AlgebraicTerm):
+                return (term.coeff == Fraction(1, 1) and
+                        term.vars == {var: 1})
+        return False
+
     def _format_solution(self, solution_dict, solve_vars):
         parts = []
         for var in sorted(solve_vars):
             expr = solution_dict.get(var, AlgebraicExpression([AlgebraicTerm(1, {var: 1})]))
+            # 跳过自由变量（表达式为 var = var 的恒等式）
+            if self._is_identity_expr(expr, var):
+                continue
             expr_str = str(expr)
             parts.append(f"{var} = {expr_str}")
+        if not parts:
+            return "任意解（所有变量均为自由变量）"
         return ", ".join(parts)
 
     def _check_denominator_zero(self, den_expr, var, sol_str, debug_callback=None, depth=0):
@@ -1608,12 +1716,15 @@ class AlgebraicCalculator:
         return result
 
     def _contains_sqrt(self, expr):
-        if isinstance(expr, SqrtExpression):
+        if isinstance(expr, (SqrtExpression, TermWithSqrt)):
             return True
         elif isinstance(expr, AlgebraicExpression):
             for term in expr.terms:
-                if isinstance(term, SqrtExpression):
+                if isinstance(term, (SqrtExpression, TermWithSqrt)):
                     return True
+        elif isinstance(expr, FractionExpression):
+            return (self._contains_sqrt(expr.numerator) or
+                    self._contains_sqrt(expr.denominator))
         return False
 
     def _simplify_rational(self, expr):

@@ -475,7 +475,51 @@ class SqrtExpression:
     def _extract_square_factors(self, expr, debug_callback=None):
         if debug_callback:
             debug_callback(f"开始提取平方因子: √({expr})", level=2)
-        if isinstance(expr, AlgebraicExpression) and len(expr.terms) == 1:
+
+        # 多项表达式：提取各项系数公因子中的完全平方因子
+        if isinstance(expr, AlgebraicExpression) and len(expr.terms) > 1:
+            all_terms_are_simple = all(
+                isinstance(t, AlgebraicTerm) for t in expr.terms
+            )
+            if all_terms_are_simple:
+                # 计算所有系数分子绝对值的 GCD
+                nums = []
+                for t in expr.terms:
+                    coeff = t.coeff if isinstance(t.coeff, Fraction) else Fraction(t.coeff, 1)
+                    nums.append(abs(coeff.numerator))
+                if len(nums) > 1:
+                    gcd_val = nums[0]
+                    for n in nums[1:]:
+                        gcd_val = math.gcd(gcd_val, n)
+                    # 检查 GCD 是否有完全平方因子
+                    if gcd_val > 1:
+                        square_factor = self._max_square_factor(gcd_val)
+                        if square_factor > 1:
+                            extracted = int(math.isqrt(square_factor))
+                            remaining_gcd = gcd_val // square_factor
+                            # 构造新项：每项系数除以 (extracted * extracted)
+                            # 即除以 square_factor
+                            new_terms = []
+                            for t in expr.terms:
+                                coeff = t.coeff if isinstance(t.coeff, Fraction) else Fraction(t.coeff, 1)
+                                # 保持符号，只除以 square_factor
+                                new_coeff = Fraction(
+                                    coeff.numerator // square_factor,
+                                    coeff.denominator
+                                )
+                                new_terms.append(AlgebraicTerm(new_coeff, dict(t.vars)))
+                            remaining_expr = AlgebraicExpression(new_terms)
+                            sqrt_remaining = SqrtExpression(remaining_expr)
+                            extracted_coeff = Fraction(extracted, 1)
+                            extracted_term = AlgebraicTerm(extracted_coeff, {})
+                            TermWithSqrt = globals().get('TermWithSqrt')
+                            if TermWithSqrt is None:
+                                return AlgebraicExpression([extracted_term, sqrt_remaining])
+                            result = TermWithSqrt(extracted_term, sqrt_remaining)
+                            if debug_callback:
+                                debug_callback(f"多项提取完全平方因子: {extracted}√({remaining_expr})", level=2)
+                            return result
+        elif isinstance(expr, AlgebraicExpression) and len(expr.terms) == 1:
             term = expr.terms[0]
             if isinstance(term, AlgebraicTerm):
                 coeff = term.coeff
@@ -1583,7 +1627,14 @@ class FractionExpression:
         try:
             if debug_callback:
                 debug_callback(f"【FractionExpression.simplify】开始化简: {self}", level=1)
-            if self._contains_sqrt(self.numerator) or self._contains_sqrt(self.denominator):
+            # 如果分母是常数或简单项，即使在分子含根号时也可以处理
+            den_is_simple = (
+                isinstance(self.denominator, AlgebraicExpression) and
+                len(self.denominator.terms) == 1 and
+                isinstance(self.denominator.terms[0], AlgebraicTerm) and
+                not self.denominator.terms[0].vars
+            )
+            if (self._contains_sqrt(self.numerator) or self._contains_sqrt(self.denominator)) and not den_is_simple:
                 if debug_callback:
                     debug_callback("分子或分母包含根号，跳过化简", level=2)
                 return self
@@ -1653,6 +1704,73 @@ class FractionExpression:
                 if debug_callback:
                     debug_callback(f"分子分母相同，约分为1", level=2)
                 return AlgebraicExpression([AlgebraicTerm(Fraction(1, 1))])
+
+            # 尝试因式分解分子分母，寻找公因子进行约分
+            try:
+                import re as _re
+                def _to_sp_str(s):
+                    s = s.replace('^', '**')
+                    s = _re.sub(r'(\d)([a-zA-Z])', r'\1*\2', s)
+                    s = _re.sub(r'(\d)\(', r'\1*(', s)
+                    # 字母乘法：保护 sqrt 不被拆分
+                    def _insert_letter_mul(ss):
+                        result = []
+                        i = 0
+                        while i < len(ss):
+                            if ss[i:i+4] == 'sqrt':
+                                result.append('sqrt')
+                                i += 4
+                            elif ss[i].isalpha():
+                                start = i
+                                while i < len(ss) and ss[i].isalpha():
+                                    i += 1
+                                block = ss[start:i]
+                                if block != 'sqrt':
+                                    result.append('*'.join(block))
+                                else:
+                                    result.append(block)
+                            else:
+                                result.append(ss[i])
+                                i += 1
+                        return ''.join(result)
+                    s = _insert_letter_mul(s)
+                    return s
+
+                if (isinstance(simplified_num, AlgebraicExpression) and
+                    isinstance(simplified_den, AlgebraicExpression) and
+                    len(simplified_num.terms) >= 1 and len(simplified_den.terms) >= 1):
+
+                    num_sp = _to_sp_str(num_str)
+                    den_sp = _to_sp_str(den_str)
+
+                    import sympy as sp
+                    try:
+                        sp_num = sp.sympify(num_sp)
+                        sp_den = sp.sympify(den_sp)
+                        g = sp.gcd(sp_num, sp_den)
+                        if g != 1:
+                            cancelled = sp.cancel(sp_num / sp_den)
+                            cancelled_str = str(cancelled).replace('**', '^').replace('*', '').replace(' ', '')
+                            if debug_callback:
+                                debug_callback(f"因式分解约分: ({num_str})/({den_str}) → {cancelled_str}", level=2)
+                            if '/' not in cancelled_str:
+                                # 分母约掉，只返回分子
+                                from algebra_solver import AlgebraicCalculator as _AC
+                                return _AC().parse_expression(cancelled_str)
+                            else:
+                                # 仍有分式，递归处理
+                                num_s, den_s = cancelled_str.split('/', 1)
+                                from algebra_solver import AlgebraicCalculator as _AC
+                                _calc = _AC()
+                                return FractionExpression(
+                                    _calc.parse_expression(num_s),
+                                    _calc.parse_expression(den_s)
+                                ).simplify(debug_callback)
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+
             try:
                 if isinstance(simplified_den, AlgebraicExpression) and len(simplified_den.terms) == 1:
                     if isinstance(simplified_den.terms[0], (AlgebraicTerm, TermWithSqrt)):
@@ -1822,18 +1940,23 @@ class DenominatorRationalizer:
             sqrt_count = 0
             sqrt_term = None
             for term in denominator.terms:
-                if isinstance(term, SqrtExpression):
+                if isinstance(term, (SqrtExpression, TermWithSqrt)):
                     sqrt_count += 1
                     sqrt_term = term
             if sqrt_count == 1 and len(denominator.terms) == 1:
                 if debug_callback:
-                    debug_callback(f"检测到分母为单个根号项: √({sqrt_term.inner_expr})", level=2)
+                    debug_callback(f"检测到分母为单个根号项", level=2)
                 return DenominatorRationalizer._rationalize_single_sqrt(
                     numerator, sqrt_term, debug_callback
                 )
             elif sqrt_count > 0:
                 if debug_callback:
-                    debug_callback("分母包含多个项，需要使用共轭有理化", level=2)
+                    debug_callback("分母包含多个项，尝试使用平方差公式（共轭）有理化", level=2)
+                result = DenominatorRationalizer._rationalize_conjugate(
+                    numerator, denominator, debug_callback
+                )
+                if result is not None:
+                    return result
                 return fraction_expr
         if debug_callback:
             debug_callback("分母不包含根号，无需有理化", level=3)
@@ -1841,15 +1964,20 @@ class DenominatorRationalizer:
 
     @staticmethod
     def _rationalize_single_sqrt(numerator, sqrt_term, debug_callback):
+        # 获取根号内部表达式（兼容 SqrtExpression 和 TermWithSqrt）
+        if isinstance(sqrt_term, SqrtExpression):
+            sqrt_inner = sqrt_term.inner_expr
+        else:  # TermWithSqrt
+            sqrt_inner = sqrt_term.sqrt_expr.inner_expr if isinstance(sqrt_term.sqrt_expr, SqrtExpression) else sqrt_term.sqrt_expr
         if isinstance(numerator, AlgebraicExpression):
             if numerator.is_constant() and numerator.terms[0].coeff == Fraction(1, 1):
                 new_numerator = sqrt_term
-                new_denominator = sqrt_term.inner_expr
+                new_denominator = sqrt_inner
                 if debug_callback:
                     debug_callback(f"分子为1，直接返回: {new_numerator} / {new_denominator}", level=2)
                 return FractionExpression(new_numerator, new_denominator)
         new_numerator = numerator * sqrt_term
-        new_denominator = sqrt_term.inner_expr
+        new_denominator = sqrt_inner
         if debug_callback:
             debug_callback(f"通用有理化: {new_numerator} / {new_denominator}", level=2)
         if hasattr(new_numerator, 'simplify'):
@@ -1865,3 +1993,69 @@ class DenominatorRationalizer:
             if const == Fraction(1, 1):
                 return simplified_num
         return FractionExpression(simplified_num, simplified_den)
+
+    @staticmethod
+    def _rationalize_conjugate(numerator, denominator, debug_callback=None):
+        """使用平方差公式（共轭）进行分母有理化
+
+        处理形如 T+√b, T-√b 的分母（T 可以是单项或多项）。
+        分子分母同乘共轭项 T-√b，利用 (T+√b)(T-√b) = T²-b 消去分母中的根号。
+        """
+        if not isinstance(denominator, AlgebraicExpression):
+            return None
+
+        terms = denominator.terms
+
+        # 收集所有含根号的项和不含根号的项
+        sqrt_terms = []
+        other_terms = []
+        for t in terms:
+            if isinstance(t, (SqrtExpression, TermWithSqrt)):
+                sqrt_terms.append(t)
+            elif isinstance(t, AlgebraicTerm):
+                other_terms.append(t)
+
+        # 必须有且仅有一个含根号的项，以及至少一个不含根号的项
+        if len(sqrt_terms) != 1 or len(other_terms) == 0:
+            return None
+
+        sqrt_term = sqrt_terms[0]
+
+        # 获取根号内部表达式
+        if isinstance(sqrt_term, SqrtExpression):
+            sqrt_inner = sqrt_term.inner_expr
+        else:  # TermWithSqrt
+            sqrt_inner = sqrt_term.sqrt_expr.inner_expr if isinstance(sqrt_term.sqrt_expr, SqrtExpression) else sqrt_term.sqrt_expr
+
+        # 将不含根号的项合并为一个表达式 T
+        if len(other_terms) == 1:
+            other_expr = AlgebraicExpression([other_terms[0]])
+        else:
+            other_expr = AlgebraicExpression(other_terms)
+
+        # 构建共轭分母：T - √b（翻转 sqrt 项的符号）
+        if isinstance(sqrt_term, TermWithSqrt):
+            neg_sqrt_coeff = Fraction(-sqrt_term.coeff.coeff.numerator, sqrt_term.coeff.coeff.denominator)
+            conjugate_sqrt = TermWithSqrt(AlgebraicTerm(neg_sqrt_coeff, dict(sqrt_term.coeff.vars)), sqrt_term.sqrt_expr)
+        else:  # SqrtExpression
+            conjugate_sqrt = TermWithSqrt(AlgebraicTerm(Fraction(-1, 1)), sqrt_term)
+        conjugate_den = AlgebraicExpression(list(other_terms) + [conjugate_sqrt])
+
+        # 新分子 = 原分子 * 共轭分母
+        new_num = numerator * conjugate_den
+        if hasattr(new_num, 'simplify'):
+            new_num = new_num.simplify(debug_callback)
+
+        # 新分母 = T² - b（利用平方差公式）
+        a_sq_expr = other_expr * other_expr
+        a_sq_expr = a_sq_expr.simplify(debug_callback) if hasattr(a_sq_expr, 'simplify') else a_sq_expr
+        new_den = a_sq_expr - sqrt_inner
+        if hasattr(new_den, 'simplify'):
+            new_den = new_den.simplify(debug_callback)
+
+        if debug_callback:
+            debug_callback(f"共轭有理化: 乘以 ({conjugate_den})/({conjugate_den})", level=2)
+            debug_callback(f"新分母: {new_den}", level=2)
+            debug_callback(f"结果: {new_num} / {new_den}", level=2)
+
+        return FractionExpression(new_num, new_den)

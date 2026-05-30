@@ -9,6 +9,57 @@ from datetime import datetime
 from algebra_solver import AlgebraicCalculator
 
 
+class ConfigManager:
+    """配置文件管理器，负责保存和加载用户设置"""
+
+    DEFAULT_CONFIG = {
+        "debug_level": 2,          # 0:无 1:简易 2:正常 3:详细
+        "debug_speed": "正常",      # 即时/快速/正常/慢速/逐条
+        "debug_enabled": True,
+    }
+
+    def __init__(self, config_file="algebra_calculator_config.json"):
+        self.config_file = config_file
+        self.config = dict(self.DEFAULT_CONFIG)
+        self.load()
+
+    def load(self):
+        """从文件加载配置，文件不存在或格式错误时使用默认值"""
+        try:
+            if os.path.exists(self.config_file):
+                with open(self.config_file, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                # 只更新已知的键，保留默认值
+                for key in self.DEFAULT_CONFIG:
+                    if key in data:
+                        self.config[key] = data[key]
+                return True
+        except Exception as e:
+            print(f"加载配置文件失败: {e}，使用默认配置")
+            self.config = dict(self.DEFAULT_CONFIG)
+        return False
+
+    def save(self):
+        """保存当前配置到文件"""
+        try:
+            with open(self.config_file, 'w', encoding='utf-8') as f:
+                json.dump(self.config, f, ensure_ascii=False, indent=2)
+            return True
+        except Exception as e:
+            print(f"保存配置文件失败: {e}")
+            return False
+
+    def get(self, key, default=None):
+        """获取配置项"""
+        return self.config.get(key, default)
+
+    def set(self, key, value):
+        """设置配置项并立即保存"""
+        if key in self.DEFAULT_CONFIG:
+            self.config[key] = value
+            self.save()
+
+
 class LogManager:
     """日志管理器，负责记录计算日志"""
 
@@ -216,7 +267,7 @@ class LogManager:
 class DebugCallback:
     """调试回调类，用于收集调试信息"""
 
-    def __init__(self, text_widget, debug_level=1):
+    def __init__(self, text_widget, debug_level=1, display_speed="正常"):
         """
         初始化debug回调
 
@@ -227,18 +278,47 @@ class DebugCallback:
                 1: 简易debug - 只显示关键步骤
                 2: 正常debug - 显示主要步骤（当前模式）
                 3: 详细debug - 显示所有细节
+            display_speed: 显示速度
+                "即时": batch=500, delay=30ms
+                "快速": batch=100, delay=60ms
+                "正常": batch=50,  delay=150ms
+                "慢速": batch=15,  delay=300ms
+                "逐条": batch=1,   delay=600ms
         """
         self.text_widget = text_widget
         self.debug_level = debug_level
         self.lines = []
-        # 添加消息队列，用于后台线程向主线程传递消息
         self.message_queue = []
-        self.max_queue_size = 2000  # 限制队列大小，防止内存/UI卡死
+        self.max_queue_size = 2000
         self.is_running = False
+        self.pending_count = 0  # 队列中待处理消息数
+
+        # 显示速度配置
+        self.SPEED_CONFIGS = {
+            "即时": (500, 30),
+            "快速": (100, 60),
+            "正常": (50, 150),
+            "慢速": (15, 300),
+            "逐条": (1, 600),
+        }
+        self.set_display_speed(display_speed)
 
     def set_debug_level(self, level):
         """设置debug级别"""
         self.debug_level = level
+
+    def set_display_speed(self, speed_name):
+        """设置显示速度"""
+        if speed_name in self.SPEED_CONFIGS:
+            self.display_speed = speed_name
+            self.batch_size, self.delay_ms = self.SPEED_CONFIGS[speed_name]
+        else:
+            self.display_speed = "正常"
+            self.batch_size, self.delay_ms = 50, 150
+
+    def get_pending_count(self):
+        """获取队列中待处理的消息数"""
+        return len(self.message_queue)
 
     def __call__(self, message, level=2):
         """
@@ -278,10 +358,9 @@ class DebugCallback:
             self.text_widget.see(tk.END)
 
     def process_queue(self):
-        """处理消息队列（在主线程中调用），每次最多处理100条防止UI卡死"""
-        batch_size = 100
+        """处理消息队列（在主线程中调用），每次处理的条数由显示速度决定"""
         processed = 0
-        while self.message_queue and processed < batch_size:
+        while self.message_queue and processed < self.batch_size:
             message, level = self.message_queue.pop(0)
             self._display_message(message, level)
             processed += 1
@@ -609,7 +688,7 @@ class TestProgressWindow:
 class AlgebraCalculatorGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("代数表达式计算器 V1.38.2(半稳定) --------------------绝对值方程 --------------------   构建时间: 2.27  ")
+        self.root.title("代数表达式计算器 V2.0.0 --------------------全基础运算 --------------------   构建时间: 5.30  ")
         self.root.geometry("1200x900")
 
         # 创建计算器实例
@@ -618,9 +697,14 @@ class AlgebraCalculatorGUI:
         # 存储历史记录
         self.history = []
 
-        # Debug模式状态和级别
-        self.debug_enabled = tk.BooleanVar(value=True)
-        self.debug_level = tk.IntVar(value=2)  # 默认正常debug
+        # 加载配置文件
+        self.config_manager = ConfigManager("algebra_calculator_config.json")
+
+        # Debug模式状态和级别（从配置文件加载）
+        saved_level = self.config_manager.get("debug_level", 2)
+        saved_enabled = self.config_manager.get("debug_enabled", True)
+        self.debug_enabled = tk.BooleanVar(value=saved_enabled)
+        self.debug_level = tk.IntVar(value=saved_level)
 
         # 创建日志管理器
         self.log_manager = LogManager("logs/algebra_calculator.log")
@@ -658,10 +742,33 @@ class AlgebraCalculatorGUI:
                 ("a-√(b)", "a-√(b)"),
                 ("a√(b)", "a√(b)"),
                 ("√(-4)", "√(-4)"),
+                # 根号内多项式提取完全平方因子
+                ("√(-4c^2+8d)", "2√(-c^2+2d)"),
+                ("√(4x^2+8)", "2√(x^2+2)"),
+                ("√(8x^2+16y^2)", "2√(2x^2+4y^2)"),
+                ("√(9a^2+18b)", "3√(a^2+2b)"),
+                ("√(12a+18b)", "√(12a+18b)"),
+                ("√(36x+48y)", "2√(9x+12y)"),
+                # 因式分解约分
+                ("(x^2-1)/(x-1)", "x+1"),
+                ("(x^2+2x+1)/(x+1)", "x+1"),
+                ("(x^2-y^2)/(x-y)", "x+y"),
+                ("(x^2-4)/(x^2-x-2)", "(x+2)/(x+1)"),
+                ("(x^3-1)/(x-1)", "x+x^2+1"),
+                ("(a^2-b^2)/(a+b)", "a-b"),
+                # 分母共轭有理化
+                ("1/(√(2)+1)", "-1+√(2)"),
+                ("1/(√(2)-1)", "1+√(2)"),
+                ("1/(2+√(3))", "2-√(3)"),
+                ("1/(1+√(x))", "(1-√(x))/(-x+1)"),
+                ("1/(√(x+1)-1)", "(-1-√(x+1))/(-x)"),
+                ("1/(√(x)+1)", "(1-√(x))/(-x+1)"),
+                # 多项分母共轭有理化（将多个不含根号的项视为整体）
+                ("1/(x+y+√(x+y))", "(x+y-√(x+y))/(-x+2xy+x^2-y+y^2)"),
             ],
             "复杂公式": [
                 ("(-b+√(b^2-4a*c))/(2a)", "(-b+√(-4ac+b^2))/2a"),
-                ("(k^2+(2a-k)^2-4*(a^2-b^2))/(2k*(2a-k))", "(-4ak+4b^2+2k^2)/(4ak-2k^2)"),
+                ("(k^2+(2a-k)^2-4*(a^2-b^2))/(2k*(2a-k))", "(-2ak+2b^2+k^2)/(2ak-k^2)"),
                 ("(x-(a+b)/2)^2", "(1/2)ab-ax+(1/4)a^2-bx+(1/4)b^2+x^2"),
                 ("(x-((a+b)/2))^2+(y-((c+d)/2))^2",
                  "(1/2)ab-ax+(1/4)a^2-bx+(1/4)b^2+(1/2)cd-cy+(1/4)c^2-dy+(1/4)d^2+x^2+y^2"),
@@ -692,12 +799,17 @@ class AlgebraCalculatorGUI:
                 ("x-5=0", "x = 5"),
             ],
             "二次方程": [
-                ("x^2-5=0", "x = √(5) 或 -√(5)"),
-                ("x^2+3x-1=0", "x = (-3+√(13))/(2) 或 (-3-√(13))/(2)"),
-                ("x^2-5x+6=0", "x = 3 或 2"),
+                ("x^2-5=0",
+                 "x = √(5) 或 -√(5)"),
+                ("x^2+3x-1=0",
+                 "x = (-3+√(13))/(2) 或 (-3-√(13))/(2)"),
+                ("x^2-5x+6=0",
+                 "x = 3 或 2"),
                 ("x^2-6x+9=0", "x = 3"),
-                ("2x^2-5x+2=0", "x = 2 或 1/2"),
-                ("x^2+3x+2=0", "x = -1 或 -2"),
+                ("2x^2-5x+2=0",
+                 "x = 2 或 1/2"),
+                ("x^2+3x+2=0",
+                 "x = -1 或 -2"),
                 ("x^2+8x+16=0", "x = -4"),
                 ("ax^2+c=0",
                  "多变量方程的解:\n  a = -c/x^2\n  c = -ax^2\n  x = √(-c/a) 或 -√(-c/a)"),
@@ -709,7 +821,8 @@ class AlgebraCalculatorGUI:
                 ("1/(x-1) = 0", "矛盾方程（无解）"),
                 ("(x^2-1)/(x-1) = 0", "x = -1"),
                 ("x/(x-2) = 3/(x-2)", "x = 3"),
-                ("1/x + 1/(x+1) = 1", "x = 1/2+(√(5))/2 或 1/2-(√(5))/2"),
+                ("1/x + 1/(x+1) = 1",
+                 "x = 1/2+(√(5))/2 或 1/2-(√(5))/2"),
             ],
             "多变量方程": [
                 ("x+y=10", "多变量方程的解:\n  x = -y+10\n  y = -x+10"),
@@ -727,17 +840,25 @@ class AlgebraCalculatorGUI:
             ],
             "联立方程组": [
                 ("x+y=5; x-y=1", "x = 3, y = 2"),
-                ("x^2+y=5; x-y=1", "x = 2, y = 1 或 x = -3, y = -4"),
+                ("x^2+y=5; x-y=1",
+                 "x = 2, y = 1 或 x = -3, y = -4"),
                 ("x+y=3; x-y=1; 2x=4", "x = 2, y = 1"),
                 ("x+y=3; x-y=1; 2x+y=4", "无解"),
-                ("x^2=4; y^2=9", "x = 2, y = 3 或 x = 2, y = -3 或 x = -2, y = 3 或 x = -2, y = -3"),
-                ("x^2=2; y=x+1", "x = √(2), y = 1+√(2) 或 x = -√(2), y = 1-√(2)"),
+                ("x^2=4; y^2=9",
+                 "x = 2, y = 3 或 x = 2, y = -3 或 x = -2, y = 3 或 x = -2, y = -3"),
+                ("x^2=2; y=x+1",
+                 "x = √(2), y = 1+√(2) 或 x = -√(2), y = 1-√(2)"),
                 ("1/x + 1/y = 1; x+y=4", "x = 2, y = 2"),
                 ("x+y=3; x+y=5", "无解"),
                 ("x+y=3; 2x+2y=6; x=1", "x = 1, y = 2"),
-                ("x+y+a=0;x+y=2", "a = -2, x = -y+2, y = y"),  # 修改：增加 ", y = y"
-                ("x + √(y) = 6; √(x) + y = 6", "无法求解，化简后的方程为：721y-204y^2+24y^3-y^4-900"),
+                ("x+y+a=0;x+y=2", "a = -2, x = -y+2"),
+                ("x + √(y) = 6; √(x) + y = 6",
+                 "无法求解，化简后的方程为：721y-204y^2+24y^3-y^4-900"),
                 ("√(x+y) = 3; x - y = 1", "x = 5, y = 4"),
+                ("x+y=c; x^2+y^2=d",
+                 "x = (1/2)c-(√(-c^2+2d))/2, y = (1/2)c+(√(-c^2+2d))/2 或 "
+                 "x = (1/2)c+(√(-c^2+2d))/2, y = (1/2)c-(√(-c^2+2d))/2",
+                 ['x', 'y']),
             ],
             "根式方程": [
                 ("√(x+1) = 2", "x = 3"),
@@ -752,8 +873,10 @@ class AlgebraCalculatorGUI:
                 ("√(x^2+1) = -2", "无解"),
             ],
             "绝对值方程": [
-                ("|x|=2", "x = 2 或 -2"),
-                ("|x-1|=3", "x = 4 或 -2"),
+                ("|x|=2",
+                 "x = 2 或 -2"),
+                ("|x-1|=3",
+                 "x = 4 或 -2"),
                 ("|x|+|y|=1",
                  "当 x ≥ 0 且 y ≥ 0 时，解为：x = -y+1\n"
                  "当 x ≥ 0 且 y < 0 时，解为：x = y+1\n"
@@ -764,17 +887,41 @@ class AlgebraCalculatorGUI:
                  "当 x+1 < 0 时，解为：x = -y-1"),
             ],
             "3.7": [
-                ("x^2+y^2=r^2; x+y=0", "x = r√(1/2), y = -r√(1/2) 或 x = -r√(1/2), y = r√(1/2)", ['x', 'y']),
+                ("x^2+y^2=r^2; x+y=0",
+                 "x = r√(1/2), y = -r√(1/2) 或 x = -r√(1/2), y = r√(1/2)",
+                 ['x', 'y']),
                 ("|x+y|=4; x^2+y^2=9",
-                 "x = 2-(√(2))/2, y = 2+(√(2))/2 或 x = 2+(√(2))/2, y = 2-(√(2))/2 或 x = -2-(√(2))/2, y = -2+(√(2))/2 或 x = -2+(√(2))/2, y = -2-(√(2))/2"),
-                ("x^2+y^2-4x=9; x=y-1", "x = (1+√(17))/2, y = (3+√(17))/2 或 x = (1-√(17))/2, y = (3-√(17))/2"),
+                 "x = 2-(√(2))/2, y = 2+(√(2))/2 或 x = 2+(√(2))/2, y = 2-(√(2))/2 或 "
+                 "x = -2-(√(2))/2, y = -2+(√(2))/2 或 x = -2+(√(2))/2, y = -2-(√(2))/2"),
+                ("x^2+y^2-4x=9; x=y-1",
+                 "x = (1+√(17))/2, y = (3+√(17))/2 或 x = (1-√(17))/2, y = (3-√(17))/2"),
                 ("x^2+y^2+4x-4y=0; x^2+y^2+2x-12=0",
                  "x = -2+4/5√(10), y = 2+2/5√(10) 或 x = -2-4/5√(10), y = 2-2/5√(10)"),
-                ("x^2/4+y^2=1; y=x", "x = 2/√(5), y = 2/√(5) 或 x = -2/√(5), y = -2/√(5)"),
+                ("x^2/4+y^2=1; y=x",
+                 "x = 2/√(5), y = 2/√(5) 或 x = -2/√(5), y = -2/√(5)"),
                 ("√(x^2+1) + √(x^2+1) = 2", "x = 0"),
-                ("x^2+y^2=9; x=y", "x = 3/√(2), y = 3/√(2) 或 x = -3/√(2), y = -3/√(2)"),
-                ("x^2+y^2=9; x=y-2", "x = -1+1/2√(14), y = 1+1/2√(14) 或 x = -1-1/2√(14), y = 1-1/2√(14)"),
-                ("x^2+y^2=9; x=y-1", "x = (-1+√(17))/2, y = (1+√(17))/2 或 x = (-1-√(17))/2, y = (1-√(17))/2"),
+                ("x^2+y^2=9; x=y",
+                 "x = 3/√(2), y = 3/√(2) 或 x = -3/√(2), y = -3/√(2)"),
+                ("x^2+y^2=9; x=y-2",
+                 "x = -1+1/2√(14), y = 1+1/2√(14) 或 x = -1-1/2√(14), y = 1-1/2√(14)"),
+                ("x^2+y^2=9; x=y-1",
+                 "x = (-1+√(17))/2, y = (1+√(17))/2 或 x = (-1-√(17))/2, y = (1-√(17))/2"),
+            ],
+        }
+        self.other_categories = {  # 因式分解等功能测试
+            "因式分解": [
+                ("x^2-1", "(x-1)(x+1)"),
+                ("x^2+2x+1", "(x+1)^2"),
+                ("x^2-y^2", "(x-y)(x+y)"),
+                ("x^3-y^3", "(x-y)(x^2+xy+y^2)"),
+                ("2x^2+4x", "2x(x+2)"),
+                ("x^2+5x+6", "(x+2)(x+3)"),
+                ("xy+yz", "y(x+z)"),
+                ("x^2+xy+xz+yz", "(x+y)(x+z)"),
+                ("x^3+3x^2+3x+1", "(x+1)^3"),
+                ("4x^2-9", "(2x-3)(2x+3)"),
+                ("a^2-b^2", "(a-b)(a+b)"),
+                ("x^2+3x+2", "(x+1)(x+2)"),
             ],
         }
 
@@ -799,18 +946,27 @@ class AlgebraCalculatorGUI:
         # 绑定键盘事件
         self.bind_events()
 
-        # 初始化debug回调
-        self.debug_callback = DebugCallback(self.debug_text, self.debug_level.get())
+        # 初始化debug回调（使用配置文件中的速度设置）
+        saved_speed = self.config_manager.get("debug_speed", "正常")
+        self.debug_callback = DebugCallback(self.debug_text, self.debug_level.get(),
+                                            display_speed=saved_speed)
 
         # 启动定时器处理debug消息队列
         self.process_debug_queue()
 
     def process_debug_queue(self):
-        """定期处理debug消息队列"""
+        """定期处理debug消息队列，间隔和批量大小由速度设置决定"""
         if self.debug_callback:
             self.debug_callback.process_queue()
-        # 每100毫秒检查一次队列
-        self.root.after(100, self.process_debug_queue)
+            # 更新待处理消息计数
+            pending = self.debug_callback.get_pending_count()
+            if pending > 0:
+                self.debug_counter_var.set(f"{pending} 条待显示")
+            elif self.debug_callback.lines:
+                self.debug_counter_var.set(f"{len(self.debug_callback.lines)} 条信息")
+        # 使用动态延迟
+        delay = self.debug_callback.delay_ms if self.debug_callback else 100
+        self.root.after(delay, self.process_debug_queue)
 
     def setup_styles(self):
         """设置样式"""
@@ -874,7 +1030,10 @@ class AlgebraCalculatorGUI:
             width=8,
             font=('Arial', 10)
         )
-        self.debug_level_combo.current(2)  # 默认选择"正常"（索引2）
+        # 从配置文件加载默认debug级别
+        level_names = ["无", "简易", "正常", "详细"]
+        saved_lv = self.config_manager.get("debug_level", 2)
+        self.debug_level_combo.current(saved_lv if 0 <= saved_lv <= 3 else 2)
         self.debug_level_combo.pack(side=tk.LEFT, padx=(5, 0))
 
         # 绑定选择事件
@@ -926,6 +1085,10 @@ class AlgebraCalculatorGUI:
         self.solve_btn = ttk.Button(op_buttons_frame, text="解方程",
                                     command=self.solve_equation, style='Solve.TButton', width=15)
         self.solve_btn.pack(side=tk.LEFT, padx=(0, 10))
+
+        self.factor_btn = ttk.Button(op_buttons_frame, text="因式分解",
+                                     command=self.factor_expression, style='Solve.TButton', width=15)
+        self.factor_btn.pack(side=tk.LEFT, padx=(0, 10))
 
         clear_btn = ttk.Button(op_buttons_frame, text="清空输入",
                                command=self.clear_expression, style='Clear.TButton')
@@ -1030,7 +1193,25 @@ class AlgebraCalculatorGUI:
         self.debug_level_var.set("级别: 正常")
         debug_level_display = ttk.Label(debug_control_frame, textvariable=self.debug_level_var,
                                         font=('Arial', 11, 'italic'), foreground='green')
-        debug_level_display.pack(side=tk.LEFT, padx=(0, 20))
+        debug_level_display.pack(side=tk.LEFT, padx=(0, 10))
+
+        # 显示速度选择
+        speed_label = ttk.Label(debug_control_frame, text="速度:", font=('Arial', 11))
+        speed_label.pack(side=tk.LEFT)
+        self.debug_speed_combo = ttk.Combobox(
+            debug_control_frame,
+            values=["即时", "快速", "正常", "慢速", "逐条"],
+            state="readonly",
+            width=6,
+            font=('Arial', 10)
+        )
+        # 从配置文件加载默认显示速度
+        speed_names = ["即时", "快速", "正常", "慢速", "逐条"]
+        saved_sp = self.config_manager.get("debug_speed", "正常")
+        sp_idx = speed_names.index(saved_sp) if saved_sp in speed_names else 2
+        self.debug_speed_combo.current(sp_idx)
+        self.debug_speed_combo.pack(side=tk.LEFT, padx=(5, 15))
+        self.debug_speed_combo.bind("<<ComboboxSelected>>", self.on_debug_speed_changed)
 
         # Debug信息计数器
         self.debug_counter_var = tk.StringVar()
@@ -1087,6 +1268,10 @@ class AlgebraCalculatorGUI:
                 self.debug_status_var.set("Debug模式: 启用")
                 self.debug_callback.text_widget = self.debug_text
 
+            # 保存配置
+            self.config_manager.set("debug_level", level)
+            self.config_manager.set("debug_enabled", level > 0)
+
     def set_debug_level(self, level):
         """设置debug级别"""
         self.debug_level.set(level)
@@ -1105,6 +1290,14 @@ class AlgebraCalculatorGUI:
             self.status_var.set(f"Debug模式已启用，当前级别：{level_text}")
         else:
             self.status_var.set(f"Debug模式已禁用（级别：{level_text}）")
+
+    def on_debug_speed_changed(self, event):
+        """当选择debug显示速度时的回调"""
+        selected = self.debug_speed_combo.get()
+        self.debug_callback.set_display_speed(selected)
+        self.status_var.set(f"Debug显示速度切换为：{selected}")
+        # 保存配置
+        self.config_manager.set("debug_speed", selected)
 
     def _get_debug_level_text(self):
         """获取debug级别的文本描述"""
@@ -1203,6 +1396,80 @@ class AlgebraCalculatorGUI:
         self.result_text.delete(1.0, tk.END)
         self.expression_entry.focus()
         self.status_var.set("已清空输入")
+
+    def factor_expression(self):
+        """因式分解：先化简表达式，再对结果进行因式分解"""
+        expression = self.expression_var.get().strip()
+
+        if not expression:
+            messagebox.showwarning("输入为空", "请输入一个表达式")
+            return
+
+        if self._contains_chinese(expression):
+            messagebox.showerror("输入错误", "表达式不能包含中文字符，请使用英文、数字和运算符。")
+            return
+
+        if ';' in expression:
+            messagebox.showinfo("提示",
+                              "因式分解不支持方程组，请使用解方程功能。\n"
+                              "已自动转为解方程。")
+            self.solve_equation()
+            return
+
+        if '=' in expression:
+            messagebox.showinfo("提示",
+                              "因式分解不支持方程，请只输入表达式。\n"
+                              "已自动转为解方程。")
+            self.solve_equation()
+            return
+
+        try:
+            self.clear_debug()
+            self.debug_status_var.set("正在因式分解...")
+            level_text = self._get_debug_level_text()
+            self.status_var.set(f"因式分解: {expression} (Debug级别: {level_text})")
+
+            debug_cb = self.debug_callback if self.debug_enabled.get() else None
+            if debug_cb:
+                debug_cb(f"开始因式分解: {expression}", level=1)
+                debug_cb(f"Debug级别: {level_text}", level=1)
+
+            result = self.calculator.factor_expression(expression, debug_cb)
+
+            self.result_text.delete(1.0, tk.END)
+            self.result_text.insert(1.0, result)
+
+            if debug_cb:
+                debug_lines = len(debug_cb.lines)
+                self.debug_counter_var.set(f"{debug_lines} 条信息")
+
+            self.add_to_history(f"[因式分解] {expression}")
+            self.add_to_history(f"[结果]   {result}")
+            self.add_to_history("-" * 60)
+
+            self.log_manager.log_calculation(
+                calculation_type="因式分解",
+                expression=expression,
+                result=result,
+                debug_info=debug_cb,
+                status="success"
+            )
+
+            self.status_var.set(f"因式分解完成: {result[:50]}...")
+            self.debug_status_var.set("完成")
+
+        except ValueError as e:
+            messagebox.showerror("输入错误", str(e))
+        except Exception as e:
+            import traceback
+            err_msg = f"因式分解失败: {str(e)}"
+            self.result_text.delete(1.0, tk.END)
+            self.result_text.insert(1.0, err_msg)
+            self.status_var.set(f"因式分解出错: {str(e)}")
+            self.debug_status_var.set("出错")
+            if self.debug_callback:
+                self.debug_callback(f"因式分解出错: {str(e)}", level=1)
+                self.debug_callback(traceback.format_exc(), level=1)
 
     def _contains_chinese(self, text):
         """检查字符串是否包含中文字符"""
@@ -1751,12 +2018,13 @@ class AlgebraCalculatorGUI:
                 return
 
         # 弹出选择对话框
-        dlg = TestSelectionDialog(self.root, self.expression_categories, self.equation_categories)
+        dlg = TestSelectionDialog(self.root, self.expression_categories,
+                                  self.equation_categories, self.other_categories)
         result = dlg.show()
-        if result is None:  # 理论上不会，但保留安全判断
+        if result is None:
             return
-        expr_selected, eq_selected = result
-        if expr_selected is None and eq_selected is None:
+        expr_selected, eq_selected, other_selected = result
+        if expr_selected is None and eq_selected is None and other_selected is None:
             return  # 用户取消
 
         # 根据选择构建测试列表
@@ -1769,7 +2037,6 @@ class AlgebraCalculatorGUI:
                     test_input, expected = item
                     all_tests.append(("表达式", test_input, expected))
                 else:
-                    # 表达式测试通常只有2个，但为了健壮性
                     test_input, expected, solve_vars = item
                     all_tests.append(("表达式", test_input, expected, solve_vars))
 
@@ -1782,6 +2049,16 @@ class AlgebraCalculatorGUI:
                 else:
                     test_input, expected, solve_vars = item
                     all_tests.append(("方程", test_input, expected, solve_vars))
+
+        # 添加其他测试（因式分解等）
+        for sub in other_selected:
+            for item in self.other_categories[sub]:
+                if len(item) == 2:
+                    test_input, expected = item
+                    all_tests.append(("其他", test_input, expected))
+                else:
+                    test_input, expected, solve_vars = item
+                    all_tests.append(("其他", test_input, expected, solve_vars))
 
         if not all_tests:
             messagebox.showinfo("无测试", "所选类别中没有测试用例")
@@ -1822,6 +2099,31 @@ class AlgebraCalculatorGUI:
             s = re.sub(r'\)(\d)', r')*\1', s)
             return sp.sympify(s)
 
+        def _is_sympy_slow_pattern(s):
+            """检测 sympy.simplify 难以快速处理的表达式模式
+
+            只检测"根号内含分式且分子分母均含负号"的极端情况。
+            典型案例：√((-y²)/(-y²+1))
+            这类表达式会让 sympy.simplify 陷入极慢的符号计算，导致界面卡死。
+            不触发普通表达式如 -2-4/5√(10) 或 (1+√(17))/2。
+            """
+            s = s.replace(' ', '')
+            sqrt_char = '√'
+            # 查找每一个 √(...) 的内容
+            pattern = sqrt_char + r'\(([^()]+)\)'
+            for m in re.findall(pattern, s):
+                content = m
+                if '/' not in content:
+                    continue
+                # 检查分数中分子和分母是否各有负号
+                parts = content.split('/')
+                if len(parts) == 2:
+                    num_neg = parts[0].count('-')
+                    den_neg = parts[1].count('-')
+                    if num_neg > 0 and den_neg > 0:
+                        return True
+            return False
+
         def compare_solution_line(exp_line, act_line):
             """比较单行解（可能包含多个变量）"""
             exp_pairs = {}
@@ -1844,15 +2146,30 @@ class AlgebraCalculatorGUI:
                 return False
 
             for var in sorted(common_vars):
+                e_val = exp_pairs[var]
+                a_val = act_pairs[var]
+
+                # 快速路径：字符串完全相同则数学等价
+                if e_val == a_val:
+                    continue
+
+                # 检测 sympy 难以快速处理的模式：嵌套根号 + 负号 + 分式
+                # 形如 √((-y²)/(-y²+1)) 的表达式会导致 sp.simplify 极慢甚至卡死
+                if _is_sympy_slow_pattern(e_val) or _is_sympy_slow_pattern(a_val):
+                    # 直接回退到精确字符串比较
+                    if e_val != a_val:
+                        return False
+                    continue
+
                 try:
-                    e_expr = to_sympy_expr(exp_pairs[var])
-                    a_expr = to_sympy_expr(act_pairs[var])
+                    e_expr = to_sympy_expr(e_val)
+                    a_expr = to_sympy_expr(a_val)
                     import sympy as sp
                     if sp.simplify(e_expr - a_expr) != 0:
                         return False
                 except Exception:
                     # sympy 比较失败，回退到原始字符串比较
-                    if exp_pairs[var] != act_pairs[var]:
+                    if e_val != a_val:
                         return False
             return True
 
@@ -1909,8 +2226,10 @@ class AlgebraCalculatorGUI:
                     if debug_cb:
                         debug_cb(f"正在测试 ({i + 1}/{total_tests}): {test_input}", level=1)
 
-                    # 判断是否为方程组且提供了求解变量
-                    if ';' in test_input and solve_vars is not None:
+                    # 判断测试类型，调用对应的计算方法
+                    if test_type == "其他":
+                        result = self.calculator.factor_expression(test_input, debug_cb)
+                    elif ';' in test_input and solve_vars is not None:
                         # 直接调用 solve_system 并传入变量列表
                         result = self.calculator.solve_system(test_input, solve_vars, debug_cb)
                     else:
@@ -2059,15 +2378,16 @@ class AlgebraCalculatorGUI:
 class TestSelectionDialog:
     """测试选择对话框，允许同时选择表达式和方程的子类别，支持多选和全选"""
 
-    def __init__(self, parent, expression_categories, equation_categories):
+    def __init__(self, parent, expression_categories, equation_categories, other_categories=None):
         self.parent = parent
         self.expression_categories = expression_categories
         self.equation_categories = equation_categories
-        self.result = None  # 存储选择结果: (选中的表达式子类别列表, 选中的方程子类别列表)
+        self.other_categories = other_categories or {}
+        self.result = None  # 存储选择结果: (选中的表达式子类别列表, 选中的方程子类别列表, 选中的其他子类别列表)
 
         self.window = tk.Toplevel(parent)
         self.window.title("选择测试类别")
-        self.window.geometry("650x450")
+        self.window.geometry("900x480")
         self.window.transient(parent)
         self.window.grab_set()
 
@@ -2127,9 +2447,29 @@ class TestSelectionDialog:
         eq_count_label = ttk.Label(eq_frame, textvariable=self.eq_count_var, font=('Arial', 9))
         eq_count_label.pack(anchor=tk.W, pady=(5, 0))
 
+        # 右边：其他测试类别
+        other_frame = ttk.LabelFrame(paned, text="其他测试", padding=10)
+        paned.add(other_frame, weight=1)
+
+        self.other_listbox = tk.Listbox(other_frame, selectmode=tk.EXTENDED, height=12, exportselection=False)
+        self.other_listbox.pack(fill=tk.BOTH, expand=True, pady=(0, 5))
+
+        for cat in self.other_categories.keys():
+            self.other_listbox.insert(tk.END, cat)
+
+        other_btn_frame = ttk.Frame(other_frame)
+        other_btn_frame.pack(fill=tk.X)
+        ttk.Button(other_btn_frame, text="全选其他", command=self._select_all_other).pack(side=tk.LEFT, padx=2)
+        ttk.Button(other_btn_frame, text="取消全选", command=self._deselect_all_other).pack(side=tk.LEFT, padx=2)
+
+        self.other_count_var = tk.StringVar(value="已选 0 项")
+        other_count_label = ttk.Label(other_frame, textvariable=self.other_count_var, font=('Arial', 9))
+        other_count_label.pack(anchor=tk.W, pady=(5, 0))
+
         # 绑定选择事件以更新计数
         self.expr_listbox.bind('<<ListboxSelect>>', self._update_counts)
         self.eq_listbox.bind('<<ListboxSelect>>', self._update_counts)
+        self.other_listbox.bind('<<ListboxSelect>>', self._update_counts)
 
         # 底部按钮
         bottom_frame = ttk.Frame(main_frame)
@@ -2142,6 +2482,7 @@ class TestSelectionDialog:
     def _select_all_and_run(self):
         self._select_all_expr()
         self._select_all_eq()
+        self._select_all_other()
         self._on_ok()
 
     def _select_all_expr(self):
@@ -2160,21 +2501,32 @@ class TestSelectionDialog:
         self.eq_listbox.selection_clear(0, tk.END)
         self._update_counts()
 
+    def _select_all_other(self):
+        self.other_listbox.selection_set(0, tk.END)
+        self._update_counts()
+
+    def _deselect_all_other(self):
+        self.other_listbox.selection_clear(0, tk.END)
+        self._update_counts()
+
     def _update_counts(self, event=None):
         expr_selected = len(self.expr_listbox.curselection())
         eq_selected = len(self.eq_listbox.curselection())
+        other_selected = len(self.other_listbox.curselection())
         self.expr_count_var.set(f"已选 {expr_selected} 项")
         self.eq_count_var.set(f"已选 {eq_selected} 项")
+        self.other_count_var.set(f"已选 {other_selected} 项")
 
     def _on_ok(self):
         expr_selected = [self.expr_listbox.get(i) for i in self.expr_listbox.curselection()]
         eq_selected = [self.eq_listbox.get(i) for i in self.eq_listbox.curselection()]
+        other_selected = [self.other_listbox.get(i) for i in self.other_listbox.curselection()]
 
-        if not expr_selected and not eq_selected:
+        if not expr_selected and not eq_selected and not other_selected:
             messagebox.showwarning("未选择", "请至少选择一个测试类别")
             return
 
-        self.result = (expr_selected, eq_selected)
+        self.result = (expr_selected, eq_selected, other_selected)
         self.window.destroy()
 
     def _on_cancel(self):
