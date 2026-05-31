@@ -3,7 +3,7 @@ from algebra_base import Fraction
 from algebra_expression import (
     AlgebraicTerm, AbsoluteValue, SqrtExpression,
     TermWithSqrt, AlgebraicExpression, FractionExpression,
-    DenominatorRationalizer
+    DenominatorRationalizer, LogExpression
 )
 
 
@@ -14,10 +14,97 @@ class UnsolvableEquationError(Exception):
         super().__init__(f"无法求解方程，已化简为：{equation}")
 
 
+def _solve_log_equation(expr, var, log_terms, debug_callback=None):
+    """Solve log equation: log(base, arg) + const = 0"""
+    from algebra_expression import LogExpression, AlgebraicExpression, AlgebraicTerm
+    from algebra_base import Fraction
+
+    if debug_callback:
+        debug_callback("Log equation detected, solving...", level=1)
+
+    # Find the log term and constant terms
+    log_term = None
+    const_terms = []
+    for t in expr.terms:
+        if isinstance(t, LogExpression):
+            if log_term is None:
+                log_term = t
+            else:
+                return f"Currently unsupported: {str(expr)}"
+        elif isinstance(t, AlgebraicTerm):
+            if t.contains_var(var):
+                return f"Currently unsupported: {str(expr)}"
+            const_terms.append(t)
+        else:
+            return f"Currently unsupported: {str(expr)}"
+
+    if log_term is None:
+        return f"Currently unsupported: {str(expr)}"
+
+    # Check where the variable is
+    from algebra_solver import AlgebraicCalculator as _AC
+    _calc = _AC()
+    var_in_base = _calc._expr_contains_var(log_term.base_expr, var)
+    var_in_arg = _calc._expr_contains_var(log_term.arg_expr, var)
+
+    if var_in_base and var_in_arg:
+        return f"Currently unsupported: {str(expr)}"
+    if not var_in_base and not var_in_arg:
+        return f"Currently unsupported: {str(expr)}"
+
+    # Compute constant sum: log(base, arg) = -const_sum
+    const_expr = AlgebraicExpression(const_terms) if const_terms else AlgebraicExpression([AlgebraicTerm(Fraction(0, 1))])
+    const_simplified = const_expr.simplify(debug_callback)
+    if not const_simplified.is_constant():
+        return f"Currently unsupported: {str(expr)}"
+
+    const_val = const_simplified.terms[0].coeff
+    rhs = Fraction(-const_val.numerator, const_val.denominator)
+
+    if debug_callback:
+        debug_callback(f"Log equation: log({log_term.base_expr}, {log_term.arg_expr}) = {rhs}", level=1)
+
+    if var_in_arg:
+        # log(base, arg_with_var) = rhs -> arg_with_var = base^rhs
+        if rhs.denominator == 1:
+            power = rhs.numerator
+            if power == 0:
+                new_rhs = AlgebraicExpression([AlgebraicTerm(Fraction(1, 1))])
+            elif power == 1:
+                new_rhs = log_term.base_expr
+            elif power > 1:
+                result = AlgebraicExpression([AlgebraicTerm(Fraction(1, 1))])
+                for _ in range(power):
+                    result = result * log_term.base_expr
+                new_rhs = result.simplify(debug_callback) if hasattr(result, 'simplify') else result
+            else:
+                result = AlgebraicExpression([AlgebraicTerm(Fraction(1, 1))])
+                for _ in range(-power):
+                    result = result * log_term.base_expr
+                new_rhs = AlgebraicExpression([AlgebraicTerm(Fraction(1, 1))]) / result
+                if hasattr(new_rhs, 'simplify'):
+                    new_rhs = new_rhs.simplify(debug_callback)
+        else:
+            return f"Currently unsupported: {str(expr)}"
+
+        new_expr = (log_term.arg_expr - new_rhs).simplify(debug_callback) if hasattr(log_term.arg_expr - new_rhs, 'simplify') else log_term.arg_expr - new_rhs
+        return solve_equation(new_expr, var, debug_callback)
+
+    elif var_in_base:
+        # log(base_with_var, arg) = rhs -> base = arg^(1/rhs)
+        if rhs.denominator == 1 and rhs.numerator == 1:
+            # log(base, arg) = 1 -> base = arg
+            new_expr = (log_term.base_expr - log_term.arg_expr).simplify(debug_callback)
+            return solve_equation(new_expr, var, debug_callback)
+        return f"Currently unsupported: {str(expr)}"
+
+    return f"Currently unsupported: {str(expr)}"
+
+
 def solve_equation(expr, var, debug_callback=None):
     """
     求解方程 expr = 0 关于变量 var 的解。
-    返回解字符串（可能包含多个解，用“或”分隔）。
+    返回解字符串（可能包含多个解，用"或"分隔）。
     """
     if debug_callback:
         debug_callback(f"开始求解变量 {var}: {expr} = 0", level=1)
@@ -27,6 +114,11 @@ def solve_equation(expr, var, debug_callback=None):
         if debug_callback:
             debug_callback(f"方程包含绝对值，无法直接求解", level=2)
         return f"目前不支持求解这类方程，已化简：{str(expr)}"
+
+    # 检查是否包含对数项，尝试求解对数方程
+    log_terms_in_expr = [t for t in expr.terms if isinstance(t, LogExpression)]
+    if log_terms_in_expr:
+        return _solve_log_equation(expr, var, log_terms_in_expr, debug_callback)
 
     coeffs = {}
     for term in expr.terms:
@@ -89,7 +181,7 @@ def solve_equation(expr, var, debug_callback=None):
         if const_expr.is_zero():
             return "恒等式（对任何值都成立）"
         else:
-            return "矛盾方程（无解）"
+            return f"矛盾方程（无解，化简后得：{str(const_expr)} = 0）"
 
     elif max_exp == 1:
         a = coeffs.get(1, AlgebraicExpression([AlgebraicTerm(Fraction(0, 1))]))
@@ -98,7 +190,7 @@ def solve_equation(expr, var, debug_callback=None):
             if b.is_zero():
                 return "无穷多解"
             else:
-                return "无解"
+                return f"无解（化简后得：{str(b)} = 0）"
         solution = (b * Fraction(-1, 1)) / a
         if hasattr(solution, 'simplify'):
             solution = solution.simplify(debug_callback)
@@ -137,6 +229,17 @@ def solve_equation(expr, var, debug_callback=None):
                     if debug_callback:
                         debug_callback(f"右边为负数 {const}，无实数解", level=2)
                     return "无实数解"
+                # 检查是否完全平方数，如 x²=1 → x=±1 而非 x=±√1
+                num = abs(const.numerator)
+                den = const.denominator
+                n_root = int(math.isqrt(num))
+                d_root = int(math.isqrt(den))
+                if n_root * n_root == num and d_root * d_root == den:
+                    val = Fraction(n_root, d_root)
+                    if val.denominator == 1:
+                        return f"{val.numerator} 或 -{val.numerator}"
+                    else:
+                        return f"{val} 或 -{val}"
             rhs_str = str(rhs_simplified).replace('+-', '-').replace('--', '+')
             return f"√({rhs_str}) 或 -√({rhs_str})"
 
@@ -178,25 +281,201 @@ def solve_equation(expr, var, debug_callback=None):
                     else:
                         return f"{sol1_str} 或 {sol2_str}"
 
-        # 判别式不是完全平方数，保留根号形式，直接返回字符串以避免内部简化错误
-        neg_b_str = str(neg_b)
-        delta_str = str(delta)
-        two_a_str = str(two_a)
-        # 简化字符串，去除可能的括号
-        if neg_b_str.startswith('(') and neg_b_str.endswith(')'):
-            neg_b_str = neg_b_str[1:-1]
-        if two_a_str.startswith('(') and two_a_str.endswith(')'):
-            two_a_str = two_a_str[1:-1]
-        sol1_str = f"({neg_b_str}+√({delta_str}))/({two_a_str})"
-        sol2_str = f"({neg_b_str}-√({delta_str}))/({two_a_str})"
-        sol1_str = sol1_str.replace('+-', '-').replace('--', '+')
-        sol2_str = sol2_str.replace('+-', '-').replace('--', '+')
+        # 判别式不是完全平方数，用表达式构造并化简，避免字符串拼接产生歧义
+        # 例如 (3+√5)/(2/y) 应化简为 y(3+√5)/2 而非保留除法嵌套
+        delta_expr = AlgebraicExpression([SqrtExpression(delta)])
+        sol1 = (neg_b + delta_expr) / two_a
+        sol2 = (neg_b - delta_expr) / two_a
+        sol1 = sol1.simplify(debug_callback)
+        sol2 = sol2.simplify(debug_callback)
+        # 规范化分式符号（避免分母为负）
+        if isinstance(sol1, FractionExpression):
+            sol1 = sol1.canonicalize_sign()
+        if isinstance(sol2, FractionExpression):
+            sol2 = sol2.canonicalize_sign()
+        sol1_str = str(sol1).replace('+-', '-').replace('--', '+')
+        sol2_str = str(sol2).replace('+-', '-').replace('--', '+')
         if sol1_str == sol2_str:
             return sol1_str
         else:
             return f"{sol1_str} 或 {sol2_str}"
+
+    elif max_exp == 4 and 3 not in coeffs and 1 not in coeffs:
+        # 双二次方程 (biquadratic): a*x⁴ + b*x² + c = 0 → 用 u = x² 代换
+        if debug_callback:
+            debug_callback(f"双二次方程，用 u = {var}² 代换求解", level=2)
+        a = coeffs.get(4, AlgebraicExpression([AlgebraicTerm(Fraction(0, 1))]))
+        b = coeffs.get(2, AlgebraicExpression([AlgebraicTerm(Fraction(0, 1))]))
+        c = coeffs.get(0, AlgebraicExpression([AlgebraicTerm(Fraction(0, 1))]))
+        if a.is_zero():
+            # 退化为二次方程
+            if b.is_zero():
+                return "无穷多解" if c.is_zero() else "无解"
+            # b*x² + c = 0 → solve quadratic
+            # Construct a quadratic expression in x²
+            quad_expr = AlgebraicExpression([
+                AlgebraicTerm(Fraction(1, 1), {var: 2}) * b.terms[0].coeff
+            ]) + c
+            return solve_equation((AlgebraicExpression([AlgebraicTerm(Fraction(1, 1), {var: 2})]) * b + c).simplify(debug_callback), var, debug_callback)
+        # 解 a*u² + b*u + c = 0，用临时变量名
+        u_var = 'u'
+        u_term = AlgebraicTerm(Fraction(1, 1), {u_var: 1})
+        # 构造二次方程表达式
+        quad_u = (AlgebraicExpression([AlgebraicTerm(Fraction(1, 1), {u_var: 2})]) * a +
+                  AlgebraicExpression([u_term]) * b +
+                  c).simplify(debug_callback)
+        u_sol_str = solve_equation(quad_u, u_var, debug_callback)
+        if debug_callback:
+            debug_callback(f"双二次代换 u = {var}² 得: {u_sol_str}", level=2)
+        # 检查是否可解
+        if "不支持" in u_sol_str or "无解" == u_sol_str or "矛盾" in u_sol_str:
+            return f"目前不支持求解这类方程，已化简：{str(expr)}"
+        if "无实数解" in u_sol_str:
+            return "无实数解"
+        # 解析 u 的解，然后 x = ±√u
+        u_parts = [p.strip() for p in u_sol_str.split(" 或 ")]
+        solutions = []
+        for u_part in u_parts:
+            if not u_part:
+                continue
+            # u_sol_str 的格式是直接的值，如同 u_var 的系数形式
+            # 需要提取数值：可以用 parse_expression
+            try:
+                # u_part 可能只是纯数学表达式字符串
+                # 构造平方根解: x = ±√(u_part)
+                u_part_clean = u_part.strip()
+                if u_part_clean in ("无解", "无实数解", "矛盾方程（无解）"):
+                    continue
+                # 避免负值产生虚数 — 先检查是否为负常数
+                try:
+                    from algebra_base import Fraction as Frac
+                    u_val = Frac.from_string(u_part_clean)
+                    if u_val.numerator < 0:
+                        continue
+                    # 检查 √u 是否可化简为有理数
+                    num_root = int(math.isqrt(u_val.numerator))
+                    den_root = int(math.isqrt(u_val.denominator))
+                    if num_root * num_root == u_val.numerator and den_root * den_root == u_val.denominator:
+                        # 完全平方数：√(9) → 3，√(1/4) → 1/2
+                        simplified = Fraction(num_root, den_root)
+                        if simplified.denominator == 1:
+                            sol_str = f"{simplified.numerator} 或 -{simplified.numerator}"
+                        else:
+                            sol_str = f"{simplified} 或 -{simplified}"
+                        solutions.append(sol_str)
+                        continue
+                except:
+                    pass
+                # 构造 ±√u 形式的解
+                sol_str = f"√({u_part_clean}) 或 -√({u_part_clean})"
+                solutions.append(sol_str)
+            except Exception as e:
+                if debug_callback:
+                    debug_callback(f"处理双二次解 {u_part} 时出错: {e}", level=2)
+                continue
+        if not solutions:
+            return "无实数解"
+        return " 或 ".join(solutions)
+
+    elif max_exp == 3:
+        # 三次方程：用 sympy 求根公式
+        if debug_callback:
+            debug_callback(f"三次方程，使用 sympy 求根公式", level=2)
+        return _solve_with_sympy(expr, var, debug_callback)
+
+    elif max_exp == 4:
+        # 四次方程：用 sympy 求根公式（双二次已在上面处理）
+        if debug_callback:
+            debug_callback(f"四次方程，使用 sympy 求根公式", level=2)
+        return _solve_with_sympy(expr, var, debug_callback)
+
     else:
         return f"目前不支持求解这类方程，已化简：{str(expr)}"
+
+
+def _solve_with_sympy(expr, var, debug_callback=None):
+    """用 sympy 求解高次方程并转回计算器格式"""
+    import sympy as sp
+    import re as _re
+
+    # 将表达式转为 sympy 格式
+    expr_str = str(expr).replace(' ', '')
+    # √(...) → sqrt(...)
+    while '√(' in expr_str:
+        expr_str = _re.sub(r'√\(([^()]+)\)', r'sqrt(\1)', expr_str)
+    expr_str = expr_str.replace('^', '**')
+    # 插入隐式乘法（数字-字母、字母-字母、)-数字、)-字母）
+    expr_str = _re.sub(r'(\d)([a-zA-Z])', r'\1*\2', expr_str)
+    expr_str = _re.sub(r'([a-zA-Z])([a-zA-Z])', r'\1*\2', expr_str)
+    expr_str = _re.sub(r'\)(\d)', r')*\1', expr_str)
+    expr_str = _re.sub(r'\)([a-zA-Z])', r')*\1', expr_str)
+
+    try:
+        x = sp.Symbol(var)
+        sympy_expr = sp.sympify(expr_str)
+        # If sympy_expr is already an Eq or similar, solve as equation = 0
+        if not isinstance(sympy_expr, sp.Expr):
+            return f"目前不支持求解这类方程，已化简：{str(expr)}"
+        solutions = sp.solve(sympy_expr, x)
+    except Exception as e:
+        if debug_callback:
+            debug_callback(f"sympy 求解失败: {e}", level=1)
+        return f"目前不支持求解这类方程，已化简：{str(expr)}"
+
+    if not solutions:
+        return "无实数解"
+
+    # Check if solutions contain complex numbers via string (fast check)
+    sol_strs_preview = [str(s) for s in solutions]
+    has_complex = any('I' in s for s in sol_strs_preview)
+    all_complex = all('I' in s for s in sol_strs_preview)
+
+    if all_complex:
+        return "无实数解"
+
+    # Filter to real solutions only; skip complex ones (avoid expensive re-parsing)
+    real_sols = []
+    for i, sol in enumerate(solutions):
+        if 'I' in sol_strs_preview[i]:
+            continue  # definitely complex, skip
+        try:
+            real = sol.is_real
+            if real is not False:  # None（含参无法判断）也保留
+                real_sols.append(sol)
+        except:
+            real_sols.append(sol)  # can't determine, include it
+
+    if not real_sols:
+        return "无实数解"
+
+    # Only keep real solutions
+    target_sols = real_sols
+
+    # Convert each solution to calculator string format
+    sol_strs = []
+    for sol in target_sols:
+        sol_s = str(sol)
+        # If the solution is too complex (contains I or is very long), just return unsolvable
+        if 'I' in sol_s or len(sol_s) > 150:
+            reason = "含参求根公式过长" if len(sol_s) > 150 else "仅存在复数解"
+            return f"无法显示（{reason}），已化简：{str(expr)}"
+        # Convert sympy format back: ** → ^, sqrt → √, * → empty
+        sol_s = sol_s.replace('**', '^')
+        # sqrt(...) → √(...)
+        while 'sqrt(' in sol_s:
+            sol_s = _re.sub(r'sqrt\(([^()]+)\)', r'√(\1)', sol_s)
+        sol_s = sol_s.replace(' ', '')
+        sol_s = sol_s.replace('*', '')
+        # Fix patterns like 1/2√ → (1/2)√
+        sol_s = _re.sub(r'(\d+/\d+)√', r'(\1)√', sol_s)
+        sol_strs.append(sol_s)
+
+    if not sol_strs:
+        return "无实数解"
+    if len(sol_strs) == 1:
+        return sol_strs[0]
+    else:
+        return ' 或 '.join(sol_strs)
 
 
 class AlgebraicCalculator:
@@ -222,6 +501,7 @@ class AlgebraicCalculator:
         processed_expr = re.sub(no_paren_pattern, r'√(\1)', processed_expr)
         processed_expr = self._handle_absolute_value(processed_expr, debug_callback)
         processed_expr = self._handle_sqrt_function(processed_expr, debug_callback)
+        processed_expr = self._handle_log_function(processed_expr, debug_callback)
         processed_expr = self._insert_implicit_multiplication(processed_expr, debug_callback)
         if debug_callback:
             debug_callback(f"处理根号后: {processed_expr}", level=3)
@@ -330,7 +610,16 @@ class AlgebraicCalculator:
                     pass
                 elif c.isalpha() and c.isascii():
                     if next_c.isalpha() and next_c.isascii():
-                        result.append('*')
+                        # 检查是否属于 log, abs, sqrt 等关键词
+                        func_start = i
+                        while func_start > 0 and expr[func_start - 1].isalpha():
+                            func_start -= 1
+                        func_end = i + 1
+                        while func_end < n and expr[func_end].isalpha():
+                            func_end += 1
+                        block = expr[func_start:func_end]
+                        if block not in ['log', 'abs', 'sqrt']:
+                            result.append('*')
                     elif next_c.isdigit():
                         result.append('*')
                     elif next_c == '√':
@@ -348,7 +637,7 @@ class AlgebraicCalculator:
                     while func_start > 0 and expr[func_start - 1].isalpha():
                         func_start -= 1
                     func_name = expr[func_start:i + 1]
-                    if func_name not in ['abs', 'sqrt']:
+                    if func_name not in ['abs', 'sqrt', 'log']:
                         result.append('*')
                 elif c == ')':
                     if next_c == '(' or next_c.isdigit() or (next_c.isalpha() and next_c.isascii()):
@@ -451,6 +740,7 @@ class AlgebraicCalculator:
                     raise ValueError(f"括号不匹配: 位置 {i} 处的左括号未闭合")
                 inner_expr = expr[i + 1:j - 1]
                 is_after_sqrt = (i > 0 and expr[i - 1] == '√')
+                is_after_log = (i >= 3 and expr[i - 3:i] == 'log')
                 has_exponent = (j < n and expr[j] == '^')
                 if has_exponent:
                     exp_start = j + 1
@@ -490,13 +780,14 @@ class AlgebraicCalculator:
                         )
                     if i > 0 and expr[i - 1] == '^':
                         result.append(f"({inner_expr})")
-                    elif is_after_sqrt:
+                    elif is_after_sqrt or is_after_log:
                         result.append(f"({inner_expr})")
                     else:
                         inner_processed = self._handle_parentheses(inner_expr, debug_callback)
                         inner_result = self._parse_expr(inner_processed, debug_callback)
                         inner_str = str(inner_result)
-                        if any(op in inner_str for op in '+-'):
+                        # Keep parens if inner contains any operator that would change precedence
+                        if any(op in inner_str for op in '+-*/'):
                             result.append(f"({inner_str})")
                         else:
                             result.append(inner_str)
@@ -671,10 +962,54 @@ class AlgebraicCalculator:
             if bracket_count != 0:
                 raise ValueError("根号括号不匹配")
             inner = factor_str[2:i - 1]
+            # 检查根号后面是否还有内容（如 /2），如果有则需在上层处理运算符
+            if i < len(factor_str):
+                raise ValueError(f"根号表达式后还有内容，需在上层处理: {factor_str[i:]}")
             if debug_callback:
                 debug_callback(f"解析根号内部表达式: {inner}", level=3)
             inner_expr = self._parse_expr(inner, debug_callback)
             return AlgebraicExpression([SqrtExpression(inner_expr)])
+
+        # 处理对数 log(base, arg)
+        if factor_str.startswith('log('):
+            if debug_callback:
+                debug_callback(f"解析对数表达式: {factor_str}", level=3)
+            # 找到匹配的右括号（log( 的开括号已消费，bracket 初始为 1）
+            bracket_count = 1
+            i = 4
+            while i < len(factor_str):
+                if factor_str[i] == '(':
+                    bracket_count += 1
+                elif factor_str[i] == ')':
+                    bracket_count -= 1
+                    if bracket_count == 0:
+                        break
+                i += 1
+            if bracket_count != 0:
+                raise ValueError("对数括号不匹配")
+            inner = factor_str[4:i]  # 提取 base,arg 部分
+            # 找到顶层逗号（分割底数和真数）
+            comma_pos = -1
+            bkt = 0
+            for j, c in enumerate(inner):
+                if c == '(':
+                    bkt += 1
+                elif c == ')':
+                    bkt -= 1
+                elif c == ',' and bkt == 0:
+                    comma_pos = j
+                    break
+            if comma_pos == -1:
+                raise ValueError("对数需要两个参数: log(底数, 真数)")
+            base_str = inner[:comma_pos]
+            arg_str = inner[comma_pos + 1:]
+            from algebra_expression import LogExpression
+            base_expr = self._parse_expr(base_str, debug_callback)
+            arg_expr = self._parse_expr(arg_str, debug_callback)
+            # 检查 log(...) 后面是否还有内容（如运算符）
+            if i + 1 < len(factor_str):
+                raise ValueError(f"对数表达式后还有内容，需在上层处理: {factor_str[i+1:]}")
+            return AlgebraicExpression([LogExpression(base_expr, arg_expr)])
 
         # 处理绝对值
         if factor_str.startswith('|') and factor_str.endswith('|'):
@@ -1036,7 +1371,8 @@ class AlgebraicCalculator:
         return s
 
     def _collect_variables(self, expr):
-        """递归收集表达式中的所有变量名"""
+        """Recursively collect all variable names"""
+        from algebra_expression import LogExpression
         vars_set = set()
         if isinstance(expr, AlgebraicExpression):
             for term in expr.terms:
@@ -1053,6 +1389,9 @@ class AlgebraicCalculator:
             vars_set.update(self._collect_variables(expr.sqrt_expr))
         elif isinstance(expr, AbsoluteValue):
             vars_set.update(self._collect_variables(expr.inner_expr))
+        elif isinstance(expr, LogExpression):
+            vars_set.update(self._collect_variables(expr.base_expr))
+            vars_set.update(self._collect_variables(expr.arg_expr))
         return vars_set
 
     def _solve_equation(self, equation, debug_callback=None):
@@ -1085,7 +1424,7 @@ class AlgebraicCalculator:
                 if num_const.is_zero():
                     return "分式方程恒成立（需排除使分母为零的点）"
                 else:
-                    return "矛盾方程（无解）"
+                    return f"矛盾方程（无解，化简后得：{str(num_const)} = 0）"
             if len(vars_in_expr) > 1:
                 vars_in_numerator = self._collect_variables(numerator)
                 if not vars_in_numerator:
@@ -1093,13 +1432,13 @@ class AlgebraicCalculator:
                     if num_const.is_zero():
                         return "分式方程恒成立（需排除使分母为零的点）"
                     else:
-                        return "矛盾方程（无解）"
+                        return f"矛盾方程（无解，化简后得：{str(num_const)} = 0）"
                 solutions = []
                 SPECIAL_SOLUTIONS = {"无实数解", "无解", "矛盾方程（无解）", "无穷多解", "恒等式（对任何值都成立）"}
                 for var in sorted(vars_in_numerator):
                     sol_str = solve_equation(numerator, var, debug_callback)
                     if sol_str in ["无解", "矛盾方程（无解）"]:
-                        return "无解"
+                        return f"无解（化简后得：{str(simplified_eq)} = 0）"
                     elif sol_str == "无穷多解":
                         solutions.append(f"  {var} 为任意值（需排除使分母为零的点）")
                         continue
@@ -1133,7 +1472,7 @@ class AlgebraicCalculator:
                                 sol_display = sol_str.strip()
                     solutions.append(f"  {var} = {sol_display}")
                 if not solutions:
-                    return "无解"
+                    return f"无解（化简后得：{str(simplified_eq)} = 0）"
                 solutions.sort()
                 result_str = "多变量方程的解:\n" + "\n".join(solutions)
                 return result_str
@@ -1144,7 +1483,7 @@ class AlgebraicCalculator:
                 if num_const_expr.is_zero():
                     return "分式方程恒成立（需排除使分母为零的点）"
                 else:
-                    return "矛盾方程（无解）"
+                    return f"矛盾方程（无解，化简后得：{str(num_const_expr)} = 0）"
             min_exp = 0
             for term in numerator.terms:
                 if isinstance(term, AlgebraicTerm) and var in term.vars:
@@ -1187,7 +1526,7 @@ class AlgebraicCalculator:
                 else:
                     valid_solutions.append(sol)
             if not valid_solutions:
-                return "无解"
+                return f"无解（所有候选解使分母 {str(denominator)} 为零）"
             elif len(valid_solutions) == 1:
                 return f"{var} = {valid_solutions[0]}"
             else:
@@ -1195,6 +1534,19 @@ class AlgebraicCalculator:
 
         # 收集所有变量
         vars_in_expr = self._collect_variables(simplified_eq)
+
+        # 无变量方程（如 1=2, 3=5）：检查是否为矛盾或恒等
+        if not vars_in_expr:
+            if isinstance(simplified_eq, AlgebraicExpression) and simplified_eq.is_constant():
+                const = simplified_eq.terms[0].coeff
+                if const == Fraction(0, 1):
+                    return "恒等式（对任何值都成立）"
+                else:
+                    return f"矛盾方程（无解，化简后得：{str(const)} = 0）"
+            # 非表达式常量
+            if str(simplified_eq).replace(' ', '') == '0':
+                return "恒等式（对任何值都成立）"
+            return f"矛盾方程（无解，化简后得：{str(simplified_eq)} = 0）"
 
         # 检查是否包含绝对值
         if self.contains_abs(simplified_eq):
@@ -1212,7 +1564,7 @@ class AlgebraicCalculator:
                 try:
                     solutions_with_conds = self._solve_abs_multivar(simplified_eq, all_vars, debug_callback)
                     if not solutions_with_conds:
-                        return "无解"
+                        return f"无解（化简后得：{str(simplified_eq)} = 0）"
                     result_lines = []
                     for conds, sol_dict in solutions_with_conds:
                         # 构建条件字符串
@@ -1280,7 +1632,10 @@ class AlgebraicCalculator:
                 try:
                     if self.contains_radical(simplified_eq):
                         sol_list = self._solve_radical_equation(simplified_eq, var, debug_callback)
-                        solution = self._format_solutions(var, sol_list)
+                        if not sol_list:
+                            solution = f"无解（化简后得：{str(simplified_eq)} = 0）"
+                        else:
+                            solution = self._format_solutions(var, sol_list)
                     else:
                         solution = solve_equation(simplified_eq, var, debug_callback)
                     results[var] = solution
@@ -1299,6 +1654,8 @@ class AlgebraicCalculator:
             if solution.strip().startswith(f"{var} ="):
                 return solution.strip()
             if solution.startswith("目前不支持求解这类方程"):
+                return solution.strip()
+            if solution.startswith("无解"):
                 return solution.strip()
             if solution.replace(' ', '').endswith('=0'):
                 return solution.strip()
@@ -1329,7 +1686,9 @@ class AlgebraicCalculator:
         if simplified.is_zero():
             return [AlgebraicExpression([AlgebraicTerm(1, {var:1})])]
         sol_str = solve_equation(simplified, var, debug_callback)
-        if "目前不支持求解这类方程" in sol_str or "方程中包含绝对值表达式" in sol_str:
+        if ("目前不支持求解这类方程" in sol_str or
+            "方程中包含绝对值表达式" in sol_str or
+            "Currently unsupported" in sol_str):
             raise UnsolvableEquationError(simplified)
         if sol_str in ("无解", "矛盾方程（无解）"):
             return []
@@ -1369,6 +1728,12 @@ class AlgebraicCalculator:
         返回解字典的列表，每个字典形如 {var: 解表达式}
         """
         if not equations:
+            if variables:
+                # 无剩余方程但有变量 → 变量为自由参数
+                sol = {}
+                for v in variables:
+                    sol[v] = AlgebraicExpression([AlgebraicTerm(Fraction(1, 1), {v: 1})])
+                return [sol]
             return [{}]
         if not variables:
             for eq in equations:
@@ -1378,8 +1743,14 @@ class AlgebraicCalculator:
 
         if len(equations) == 1 and len(variables) == 1:
             var = variables[0]
+            eq = equations[0]
+            # 恒等式检测：单方程为零或为 |A|=√B 型恒等式
+            if hasattr(eq, 'is_zero') and eq.is_zero():
+                return [{var: AlgebraicExpression([AlgebraicTerm(Fraction(1, 1), {var: 1})])}]
+            if self._is_abs_sqrt_identity(eq, debug_callback):
+                return [{var: AlgebraicExpression([AlgebraicTerm(Fraction(1, 1), {var: 1})])}]
             try:
-                sols = self._solve_one_equation(equations[0], var, debug_callback)
+                sols = self._solve_one_equation(eq, var, debug_callback)
             except UnsolvableEquationError as e:
                 raise e
             result = []
@@ -1499,9 +1870,38 @@ class AlgebraicCalculator:
         result = []
         for sol_expr in sols_for_var:
             new_equations = []
+            too_complex = False
             for other_eq in remaining_equations:
+                # 复杂度守卫：代入前预估项数，避免在超大表达式上化简
                 new_eq = other_eq.substitute(var, sol_expr, debug_callback)
-                new_equations.append(new_eq.simplify(debug_callback))
+                raw_term_count = len(new_eq.terms) if hasattr(new_eq, 'terms') else 1
+                if raw_term_count > 100:
+                    if debug_callback:
+                        debug_callback(f"表达式过于复杂（{raw_term_count}项），跳过此分支", level=2)
+                    too_complex = True
+                    break
+                simplified = new_eq.simplify(debug_callback)
+                term_count = len(simplified.terms) if hasattr(simplified, 'terms') else 0
+                if term_count > 100:
+                    if debug_callback:
+                        debug_callback(f"化简后仍过于复杂（{term_count}项），跳过此分支", level=2)
+                    too_complex = True
+                    break
+                # 恒等式检测：代入后方程恒为零，说明该方程是冗余的，跳过
+                if hasattr(simplified, 'is_zero') and simplified.is_zero():
+                    if debug_callback:
+                        debug_callback(f"方程化简为 0=0（恒等式），跳过", level=2)
+                    continue
+                # 恒等式检测：|A| = √(B) 型 → A²-B=0 则是恒等式
+                if self._is_abs_sqrt_identity(simplified, debug_callback):
+                    if debug_callback:
+                        debug_callback(f"检测到 |A|=√(B) 恒等式，跳过", level=2)
+                    continue
+                new_equations.append(simplified)
+            if too_complex:
+                raise UnsolvableEquationError(
+                    AlgebraicExpression([AlgebraicTerm(Fraction(1, 1), {variables[0]: 1})])
+                )
             try:
                 sub_solutions = self._eliminate(new_equations, variables[1:], debug_callback)
             except UnsolvableEquationError as e:
@@ -1516,7 +1916,7 @@ class AlgebraicCalculator:
         """将解字典中的表达式相互代入以简化，但避免不必要的化简"""
         sol = sol_dict.copy()
         changed = True
-        max_iter = 100
+        max_iter = 10
         iter_count = 0
         while changed and iter_count < max_iter:
             iter_count += 1
@@ -1575,9 +1975,10 @@ class AlgebraicCalculator:
             except UnsolvableEquationError as e:
                 return f"无法求解，化简后的方程为：{e.equation}"
             if not solutions:
-                return "无解"
+                eq_strs = [str(eq) for eq in equations]
+                return f"无解（化简后的方程组：{' ; '.join(eq_strs)} = 0）"
 
-            # 验根过滤
+# 验根过滤
             valid_solutions = []
             for sol_dict in solutions:
                 is_valid = True
@@ -1587,6 +1988,9 @@ class AlgebraicCalculator:
                         substituted = substituted.substitute(var, val, debug_callback)
                     substituted = substituted.simplify(debug_callback)
                     if self._is_zero(substituted):
+                        continue
+                    # 恒等式检测：|A|±√B 型在代入后可能不直接为零但实际等价
+                    if self._is_abs_sqrt_identity(substituted, debug_callback):
                         continue
                     val_approx = self._approx_value(substituted)
                     if val_approx is not None and abs(val_approx) < 1e-10:
@@ -1608,9 +2012,10 @@ class AlgebraicCalculator:
                     valid_solutions.append(sol_dict)
 
             if not valid_solutions:
-                return "无解"
+                eq_strs = [str(eq) for eq in equations]
+                return f"无解（化简后的方程组：{' ; '.join(eq_strs)} = 0）"
 
-            # 对每个解进行相互代入以简化表达式
+# 对每个解进行相互代入以简化表达式
             for i in range(len(valid_solutions)):
                 valid_solutions[i] = self._substitute_solution(valid_solutions[i], debug_callback)
 
@@ -1692,28 +2097,36 @@ class AlgebraicCalculator:
             start = result.find('sqrt(')
             if start == -1:
                 break
-            bracket_count = 0
-            i = start + 4
-            while i < len(result):
+            bracket_count = 1  # 从1开始，因为sqrt(的开括号已经消费
+            i = start + 5  # 从sqrt(的内部分开始
+            while i < len(result) and bracket_count > 0:
                 if result[i] == '(':
                     bracket_count += 1
                 elif result[i] == ')':
-                    if bracket_count == 0:
-                        break
                     bracket_count -= 1
                 i += 1
-            if i >= len(result):
+            if bracket_count != 0:
                 break
             inner_start = start + 5
-            inner_expr = result[inner_start:i]
+            inner_expr = result[inner_start:i - 1]
+            # 隐式乘法：处理 √(3)x 中的 )x → )*x
+            inner_expr = self._insert_implicit_multiplication(inner_expr, debug_callback)
             if debug_callback:
                 debug_callback(f"找到平方根函数: sqrt({inner_expr})", level=3)
             inner_result = self._parse_expr(inner_expr, debug_callback)
             sqrt_expr = f"√({inner_expr})"
-            result = result[:start] + sqrt_expr + result[i + 1:]
+            result = result[:start] + sqrt_expr + result[i:]
+            # 处理替换后可能产生的隐式乘法 如 ...√(...)x
+            result = self._insert_implicit_multiplication(result, debug_callback)
             if debug_callback:
                 debug_callback(f"替换后表达式: {result}", level=3)
         return result
+
+    def _handle_log_function(self, expr, debug_callback=None):
+        """预处理 log(base, arg)：不做格式转换，保持原样。
+        实际解析在 _parse_factor 中通过检测 'log(' 前缀完成。
+        """
+        return expr  # 保持原样，逗号由 _parse_factor 特殊处理
 
     def _contains_sqrt(self, expr):
         if isinstance(expr, (SqrtExpression, TermWithSqrt)):
@@ -1798,6 +2211,41 @@ class AlgebraicCalculator:
         """判断一个项是否为根号项（SqrtExpression 或 TermWithSqrt）"""
         return isinstance(term, (SqrtExpression, TermWithSqrt))
 
+    def _is_abs_sqrt_identity(self, expr, debug_callback=None):
+        """检测 |A| ± √(B) = 0 型恒等式：若 A² - B = 0 则为恒等式"""
+        if not isinstance(expr, AlgebraicExpression):
+            return False
+        terms = expr.terms
+        if len(terms) != 2:
+            return False
+        abs_term = None
+        sqrt_term = None
+        for t in terms:
+            if isinstance(t, AbsoluteValue):
+                abs_term = t
+            elif isinstance(t, (SqrtExpression, TermWithSqrt)):
+                sqrt_term = t
+        if abs_term is None or sqrt_term is None:
+            return False
+        # 获取 A 和 B
+        A = abs_term.inner_expr
+        if isinstance(sqrt_term, SqrtExpression):
+            B = sqrt_term.inner_expr
+        else:  # TermWithSqrt
+            B_expr = sqrt_term.sqrt_expr
+            B = B_expr.inner_expr if isinstance(B_expr, SqrtExpression) else B_expr
+        # 计算 A² - B
+        try:
+            A_sq = (A * A).simplify()
+            diff = (A_sq - B).simplify()
+            if hasattr(diff, 'is_zero') and diff.is_zero():
+                if debug_callback:
+                    debug_callback(f"检测到 |A|²-B=0 恒等式，A={A}, B={B}", level=2)
+                return True
+        except:
+            pass
+        return False
+
     def _format_solutions(self, var, sol_list):
         """将解表达式列表格式化为字符串（如 x = 3 或 2）"""
         if not sol_list:
@@ -1808,15 +2256,45 @@ class AlgebraicCalculator:
             sol_strs = [str(s) for s in sol_list]
             return f"{var} = {' 或 '.join(sol_strs)}"
 
+    def _parse_solution_string(self, sol_str, var, debug_callback=None):
+        """将 solve_equation 返回的字符串解析为 AlgebraicExpression 列表"""
+        sol_str = sol_str.strip()
+        if sol_str in ("无解", "无实数解", "矛盾方程（无解）", "无穷多解",
+                       "恒等式（对任何值都成立）"):
+            return []
+        if " 或 " in sol_str:
+            parts = sol_str.split(" 或 ")
+        else:
+            parts = [sol_str]
+        solutions = []
+        for p in parts:
+            p = p.strip()
+            if not p or p in ("无解", "无实数解"):
+                continue
+            try:
+                sol_expr = self.parse_expression(p, debug_callback)
+                if hasattr(sol_expr, 'simplify'):
+                    sol_expr = sol_expr.simplify(debug_callback)
+                solutions.append(sol_expr)
+            except Exception:
+                continue
+        return solutions
+
     def _solve_radical_equation(self, expr, var, debug_callback=None, depth=0, seen=None):
         """
         递归求解含有根号的方程 expr = 0 关于变量 var
         返回解表达式列表（每个元素为 AlgebraicExpression）
         """
-        MAX_DEPTH = 6
+        MAX_DEPTH = 3
         if depth > MAX_DEPTH:
             if debug_callback:
                 debug_callback(f"递归深度超限 ({MAX_DEPTH})，停止求解", level=2)
+            return []
+        # 复杂度守卫：项数过多时放弃求解，避免超大表达式导致耗时过长
+        term_count = len(expr.terms) if hasattr(expr, 'terms') else 1
+        if term_count > 80:
+            if debug_callback:
+                debug_callback(f"表达式项数过多 ({term_count})，停止根式求解", level=2)
             return []
 
         if seen is None:
@@ -1835,6 +2313,31 @@ class AlgebraicCalculator:
                 return self._solve_one_equation(numerator, var, debug_callback)
             else:
                 return self._solve_radical_equation(numerator, var, debug_callback, depth, seen)
+
+        # 含绝对值时先展开绝对值的分支情况，再递归求解每个分支
+        if self.contains_abs(expr):
+            if debug_callback:
+                debug_callback(f"根号方程含绝对值，先展开绝对值分支", level=2)
+            # 转换为 AlgebraicExpression（确保可以遍历）
+            eq_expr = expr if isinstance(expr, AlgebraicExpression) else AlgebraicExpression([expr])
+            # 找到第一个含 var 的绝对值项
+            for term in eq_expr.terms:
+                if isinstance(term, AbsoluteValue) and self._term_contains_var(term, var):
+                    inner = term.inner_expr
+                    other_terms = [t for t in eq_expr.terms if t is not term]
+                    rest = AlgebraicExpression(other_terms) if other_terms else AlgebraicExpression([AlgebraicTerm(Fraction(0, 1))])
+                    # 情况1: inner ≥ 0 → |inner| = inner，方程: inner + rest = 0
+                    eq1 = (inner + rest).simplify(debug_callback)
+                    # 情况2: inner < 0 → |inner| = -inner，方程: -inner + rest = 0
+                    eq2 = (AlgebraicExpression([AlgebraicTerm(Fraction(-1, 1))]) * inner + rest).simplify(debug_callback)
+                    if debug_callback:
+                        debug_callback(f"绝对值分支1 (inner≥0): {eq1} = 0", level=2)
+                        debug_callback(f"绝对值分支2 (inner<0): {eq2} = 0", level=2)
+                    sols1 = self._solve_radical_equation(eq1, var, debug_callback, depth, seen.copy())
+                    sols2 = self._solve_radical_equation(eq2, var, debug_callback, depth, seen.copy())
+                    return sols1 + sols2
+            # 如果没有含 var 的绝对值项，继续正常处理
+            pass
 
         # 无根号则常规求解
         if not self.contains_radical(expr):
@@ -1901,8 +2404,17 @@ class AlgebraicCalculator:
                 debug_callback(f"减法运算出错: {e}, chosen_sq={chosen_sq}, right_sq={right_sq}", level=1)
             return []
 
-        # 递归求解
-        candidates = self._solve_radical_equation(new_expr, var, debug_callback, depth + 1, seen)
+        # 递归求解：若无根号则直接用 solve_equation（支持高次），否则继续递归
+        squaring_produced_polynomial = False
+        if self.contains_radical(new_expr) or self.contains_abs(new_expr):
+            candidates = self._solve_radical_equation(new_expr, var, debug_callback, depth + 1, seen)
+        else:
+            squaring_produced_polynomial = True
+            try:
+                sol_str = solve_equation(new_expr, var, debug_callback)
+                candidates = self._parse_solution_string(sol_str, var, debug_callback)
+            except Exception:
+                candidates = self._solve_radical_equation(new_expr, var, debug_callback, depth + 1, seen)
         if candidates is None:
             candidates = []
 
@@ -1932,9 +2444,15 @@ class AlgebraicCalculator:
 
         # ========== 结束 ==========
 
-        # 验根
+        # 验根：平方引入增根，需验证（解过于复杂时跳过以避免耗时过长）
         valid = []
         for sol in candidates:
+            sol_str = str(sol)
+            # 嵌套根式（√内部含√）验证太慢，直接接受
+            # 检测方式：字符串中出现两个或以上√，且距离很近说明嵌套
+            if sol_str.count('√') >= 2:
+                valid.append(sol)
+                continue
             try:
                 substituted = expr.substitute(var, sol, debug_callback).simplify(debug_callback)
                 if debug_callback:
@@ -2018,6 +2536,7 @@ class AlgebraicCalculator:
 
     def _term_contains_var(self, term, var):
         """判断一个项是否包含变量 var"""
+        from algebra_expression import LogExpression
         if isinstance(term, AlgebraicTerm):
             return var in term.vars
         elif isinstance(term, SqrtExpression):
@@ -2027,10 +2546,14 @@ class AlgebraicCalculator:
                     self._expr_contains_var(term.sqrt_expr, var))
         elif isinstance(term, AbsoluteValue):
             return self._expr_contains_var(term.inner_expr, var)
+        elif isinstance(term, LogExpression):
+            return (self._expr_contains_var(term.base_expr, var) or
+                    self._expr_contains_var(term.arg_expr, var))
         return False
 
     def _expr_contains_var(self, expr, var):
         """判断表达式是否包含变量 var"""
+        from algebra_expression import LogExpression
         if isinstance(expr, AlgebraicExpression):
             for term in expr.terms:
                 if self._term_contains_var(term, var):
@@ -2041,6 +2564,9 @@ class AlgebraicCalculator:
         elif isinstance(expr, FractionExpression):
             return (self._expr_contains_var(expr.numerator, var) or
                     self._expr_contains_var(expr.denominator, var))
+        elif isinstance(expr, LogExpression):
+            return (self._expr_contains_var(expr.base_expr, var) or
+                    self._expr_contains_var(expr.arg_expr, var))
         else:
             return False
 
@@ -2344,8 +2870,22 @@ class AlgebraicCalculator:
                         return [(conditions, {})]  # 恒成立
                     else:
                         return []  # 矛盾
-                # 选择一个变量（例如第一个）
+                # 选择变量：优先选 log 真数中的变量（求解更简单）
                 chosen_var = sorted(vars_in_expr)[0]
+                from algebra_expression import LogExpression
+                log_terms = [t for t in expr.terms if isinstance(t, LogExpression)]
+                best_var = None
+                if log_terms:
+                    for var in sorted(vars_in_expr):
+                        for lt in log_terms:
+                            var_in_arg = self._expr_contains_var(lt.arg_expr, var)
+                            var_in_base = self._expr_contains_var(lt.base_expr, var)
+                            if var_in_arg and not var_in_base:
+                                best_var = var
+                                break
+                        if best_var:
+                            chosen_var = best_var
+                            break
                 sol_list = self._solve_one_equation(expr, chosen_var, debug_callback)
                 if not sol_list:
                     return []

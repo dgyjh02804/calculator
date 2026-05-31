@@ -37,6 +37,24 @@ class AlgebraicTerm:
             term_as_expr = AlgebraicExpression([self])
             new_numerator = term_as_expr * other.numerator
             return FractionExpression(new_numerator, other.denominator)
+        elif isinstance(other, LogExpression):
+            # 常数项 * log: 先化简；如无法化简为常数，用幂规则: c*log(b,a)=log(b,a^c)
+            try:
+                simplified_log = other.simplify(None)
+            except Exception:
+                simplified_log = other
+            if isinstance(simplified_log, AlgebraicExpression) and len(simplified_log.terms) == 1:
+                term = simplified_log.terms[0]
+                if isinstance(term, AlgebraicTerm):
+                    return self * term
+            # 用幂规则处理
+            c = self.coeff
+            if c == Fraction(1, 1):
+                return AlgebraicExpression([other])
+            if c.denominator == 1:
+                return AlgebraicExpression([LogExpression(other.base_expr,
+                    LogExpression._raise_to_power(other.arg_expr, c.numerator))])
+            return AlgebraicExpression([other])
         return NotImplemented
 
     def __truediv__(self, other):
@@ -75,6 +93,9 @@ class AlgebraicTerm:
 
     def contains_var(self, var):
         return var in self.vars
+
+    def simplify(self, debug_callback=None):
+        return AlgebraicExpression([self])
 
     def get_coefficient_for_var(self, var):
         if len(self.vars) == 1 and var in self.vars and self.vars[var] == 1:
@@ -423,9 +444,11 @@ class SqrtExpression:
             simplified_inner = self.inner_expr.simplify(debug_callback)
         else:
             simplified_inner = self.inner_expr
-        # 如果是常数且为负数，则不化简，直接返回自身
+        # √(0) = 0
         if isinstance(simplified_inner, AlgebraicExpression) and simplified_inner.is_constant():
             const = simplified_inner.terms[0].coeff
+            if const == Fraction(0, 1):
+                return AlgebraicExpression([AlgebraicTerm(Fraction(0, 1))])
             if const.numerator < 0:
                 if debug_callback:
                     debug_callback(f"常数 {const} 为负数，保留根号形式", level=3)
@@ -443,6 +466,10 @@ class SqrtExpression:
                 return AlgebraicExpression([AlgebraicTerm(result)])
             elif debug_callback:
                 debug_callback(f"常数 {const} 不是完全平方数，保留根号形式", level=3)
+        # 尝试化简嵌套根号 √(a + b√c)
+        denested = self._try_denest(simplified_inner, debug_callback)
+        if denested is not None:
+            return denested
         return self._extract_square_factors(simplified_inner, debug_callback)
 
     def _is_perfect_square(self, n):
@@ -450,6 +477,118 @@ class SqrtExpression:
             return None
         root = int(math.isqrt(n))
         return root if root * root == n else None
+
+    def _try_denest(self, inner_expr, debug_callback=None):
+        """尝试化简嵌套根号 √(a + b√c) → √x + √y（如果 a²-b²c 是完全平方数）"""
+        if not isinstance(inner_expr, AlgebraicExpression):
+            return None
+        terms = inner_expr.terms
+        if len(terms) != 2:
+            return None
+
+        # 尝试提取公共变量因子（如 √(4x+2x√3) → 先提取 x）
+        common_vars = None
+        for t in terms:
+            tvars = {}
+            if isinstance(t, AlgebraicTerm):
+                tvars = dict(t.vars)
+            elif isinstance(t, TermWithSqrt):
+                tvars = dict(t.coeff.vars)
+            if common_vars is None:
+                common_vars = dict(tvars)
+            else:
+                # 交集：只保留两者都有的变量，取最小指数
+                for v in list(common_vars.keys()):
+                    if v in tvars:
+                        common_vars[v] = min(common_vars[v], tvars[v])
+                    else:
+                        del common_vars[v]
+        var_factor = None
+        if common_vars:
+            var_factor = AlgebraicTerm(Fraction(1, 1), common_vars)
+            # 构造不含公共变量的新项
+            new_terms = []
+            for t in terms:
+                if isinstance(t, AlgebraicTerm):
+                    new_vars = dict(t.vars)
+                    for v in common_vars:
+                        if v in new_vars:
+                            new_vars[v] -= common_vars[v]
+                            if new_vars[v] == 0:
+                                del new_vars[v]
+                    new_terms.append(AlgebraicTerm(t.coeff, new_vars))
+                elif isinstance(t, TermWithSqrt):
+                    new_vars = dict(t.coeff.vars)
+                    for v in common_vars:
+                        if v in new_vars:
+                            new_vars[v] -= common_vars[v]
+                            if new_vars[v] == 0:
+                                del new_vars[v]
+                    new_coeff = AlgebraicTerm(t.coeff.coeff, new_vars)
+                    new_terms.append(TermWithSqrt(new_coeff, t.sqrt_expr))
+            inner_expr = AlgebraicExpression(new_terms)
+            terms = new_terms
+
+        # 找出常数项 a 和 b√c 项
+        const_term = None
+        sqrt_term = None
+        for t in terms:
+            if isinstance(t, AlgebraicTerm) and t.is_constant():
+                const_term = t
+            elif isinstance(t, TermWithSqrt) and t.coeff.is_constant() and \
+                 isinstance(t.sqrt_expr, SqrtExpression) and t.sqrt_expr.inner_expr.is_constant():
+                sqrt_term = t
+        if const_term is None or sqrt_term is None:
+            return None
+        a = const_term.coeff
+        b = sqrt_term.coeff.coeff  # coeff of TermWithSqrt is AlgebraicTerm, get its Fraction
+        c_expr = sqrt_term.sqrt_expr.inner_expr
+        if not c_expr.is_constant():
+            return None
+        c = c_expr.terms[0].coeff
+        # 检测 a² - b²c 是否为完全平方数
+        # 用浮点近似判断，再精确验证
+        a_f = a.numerator / a.denominator
+        b_f = b.numerator / b.denominator
+        c_f = c.numerator / c.denominator
+        inner_val = a_f * a_f - b_f * b_f * c_f
+        if inner_val < -1e-10:
+            return None
+        if inner_val < 0:
+            inner_val = 0
+        k_root = round(math.sqrt(inner_val))
+        if k_root * k_root != round(inner_val):
+            return None
+        k = Fraction(k_root, 1)
+        # 计算 (a+k)/2 和 (a-k)/2
+        half = Fraction(1, 2)
+        x_val = (a + k) * half
+        y_val = (a - k) * half
+        if x_val.numerator < 0 or y_val.numerator < 0:
+            return None
+        # 构造 √x + √y（或 √x - √y，取决于 b 的符号）
+        x_sqrt = SqrtExpression(AlgebraicExpression([AlgebraicTerm(x_val)]))
+        y_sqrt = SqrtExpression(AlgebraicExpression([AlgebraicTerm(y_val)]))
+        # 化简内部根号
+        x_simplified = x_sqrt.simplify(debug_callback)
+        y_simplified = y_sqrt.simplify(debug_callback)
+        if b_f >= 0:
+            result = AlgebraicExpression([AlgebraicTerm(Fraction(1, 1))]) * x_simplified + \
+                     AlgebraicExpression([AlgebraicTerm(Fraction(1, 1))]) * y_simplified
+        else:
+            result = AlgebraicExpression([AlgebraicTerm(Fraction(1, 1))]) * x_simplified - \
+                     AlgebraicExpression([AlgebraicTerm(Fraction(1, 1))]) * y_simplified
+        # 如果有提取的变量因子，乘回 √(var_factor)
+        if var_factor is not None:
+            var_sqrt = SqrtExpression(AlgebraicExpression([var_factor]))
+            # 化简 √(x²) → x 等
+            var_sqrt = var_sqrt.simplify(debug_callback)
+            if isinstance(var_sqrt, SqrtExpression):
+                var_sqrt = AlgebraicExpression([var_sqrt])
+            result = result * var_sqrt
+        if debug_callback:
+            debug_callback(f"嵌套根号化简: √({inner_expr}) = {result}", level=2)
+        return result.simplify(debug_callback) if hasattr(result, 'simplify') else result
 
     def _max_square_factor(self, n):
         if isinstance(n, Fraction):
@@ -682,6 +821,220 @@ class SqrtExpression:
         return AlgebraicExpression([other]) - self
 
 
+# ========== 对数表达式 LogExpression ==========
+
+class LogExpression:
+    """表示对数表达式，如 log(base, arg)"""
+
+    def __init__(self, base_expr, arg_expr):
+        self.base_expr = base_expr
+        self.arg_expr = arg_expr
+
+    def __eq__(self, other):
+        if not isinstance(other, LogExpression):
+            return False
+        return self.base_expr == other.base_expr and self.arg_expr == other.arg_expr
+
+    def simplify(self, debug_callback=None):
+        if debug_callback:
+            debug_callback(f"开始化简对数表达式: log({self.base_expr}, {self.arg_expr})", level=1)
+        if hasattr(self.base_expr, 'simplify'):
+            base_s = self.base_expr.simplify(debug_callback)
+        else:
+            base_s = self.base_expr
+        if hasattr(self.arg_expr, 'simplify'):
+            arg_s = self.arg_expr.simplify(debug_callback)
+        else:
+            arg_s = self.arg_expr
+
+        # 验证：底数为 1 无意义
+        if isinstance(base_s, AlgebraicExpression) and base_s.is_constant():
+            bc = base_s.terms[0].coeff
+            if bc == Fraction(1, 1):
+                if debug_callback:
+                    debug_callback("底数为1无意义，报错", level=1)
+                raise ValueError("log 的底数不能为 1")
+            if bc.numerator <= 0:
+                raise ValueError("log 的底数必须为正数")
+        if isinstance(arg_s, AlgebraicExpression) and arg_s.is_constant():
+            ac = arg_s.terms[0].coeff
+            if ac.numerator <= 0:
+                raise ValueError("log 的真数必须为正数")
+
+        # 检查底数和真数是否相同: log(a, a) = 1
+        if str(base_s) == str(arg_s):
+            if debug_callback:
+                debug_callback(f"底数=真数，结果为1", level=2)
+            return AlgebraicExpression([AlgebraicTerm(Fraction(1, 1))])
+
+        # 检查真数是否为1: log(a, 1) = 0
+        if isinstance(arg_s, AlgebraicExpression) and arg_s.is_constant():
+            const = arg_s.terms[0].coeff
+            if const == Fraction(1, 1):
+                if debug_callback:
+                    debug_callback(f"真数为1，结果为0", level=2)
+                return AlgebraicExpression([AlgebraicTerm(Fraction(0, 1))])
+
+        # 提取单项的幂指数：判断 arg 或 base 是否为 base/arg 的幂次
+        def _get_single_var_power(expr):
+            """若expr是单项 (coeff*var^exp)，返回 (var_name, exp, coeff)；否则返回 None"""
+            if isinstance(expr, AlgebraicExpression) and len(expr.terms) == 1:
+                term = expr.terms[0]
+                if isinstance(term, AlgebraicTerm) and len(term.vars) == 1:
+                    var, exp = list(term.vars.items())[0]
+                    return (var, exp, term.coeff)
+            return None
+
+        # 提取仅含单变量幂的项（忽略系数）
+        def _get_var_power(expr):
+            """若expr是某变量的单项式（系数为1），返回 (var_name, exp)；否则返回 None"""
+            if isinstance(expr, AlgebraicExpression) and len(expr.terms) == 1:
+                term = expr.terms[0]
+                if isinstance(term, AlgebraicTerm) and len(term.vars) == 1 and term.coeff == Fraction(1, 1):
+                    var, exp = list(term.vars.items())[0]
+                    return (var, exp)
+            return None
+
+        base_power = _get_var_power(base_s)
+        arg_power = _get_var_power(arg_s)
+
+        # 规则：log(x^m, x^n) = n/m（同底变量）
+        if base_power and arg_power and base_power[0] == arg_power[0]:
+            m, n = base_power[1], arg_power[1]
+            ratio = Fraction(n, m)
+            if debug_callback:
+                debug_callback(f"同底变量幂: log({base_power[0]}^{m}, {arg_power[0]}^{n}) = {ratio}", level=2)
+            return AlgebraicExpression([AlgebraicTerm(ratio)])
+
+        # 规则：log(x^n, x) = 1/n
+        if base_power and arg_power is None:
+            # check if arg is the base variable (without the exponent)
+            arg_var = _get_single_var_power(arg_s)
+            if arg_var:
+                pass  # handled above
+
+        # 规则（保持原样，幂次由系数乘法合并处理）：
+        # c * log(b, a) = log(b, a^c)（通过 __rmul__ 处理）
+        # log(b, x^n) 和 log(x^n, b) 保持原样不做拆分
+
+        # 常数求值（包括分数结果）
+        if (isinstance(base_s, AlgebraicExpression) and base_s.is_constant() and
+            isinstance(arg_s, AlgebraicExpression) and arg_s.is_constant()):
+            try:
+                b_num = base_s.terms[0].coeff.numerator
+                b_den = base_s.terms[0].coeff.denominator
+                a_num = arg_s.terms[0].coeff.numerator
+                a_den = arg_s.terms[0].coeff.denominator
+                b = b_num / b_den
+                a = a_num / a_den
+                if b > 0 and b != 1 and a > 0:
+                    import math
+                    val = math.log(a, b)
+                    # 尝试转为精确分数
+                    from fractions import Fraction as PyFraction
+                    frac = PyFraction(val).limit_denominator(1000)
+                    if abs(float(frac) - val) < 1e-10:
+                        result = Fraction(frac.numerator, frac.denominator)
+                        if debug_callback:
+                            debug_callback(f"常数对数（分数）: log({b}, {a}) = {result}", level=2)
+                        return AlgebraicExpression([AlgebraicTerm(result)])
+            except (ValueError, ZeroDivisionError):
+                pass
+
+        # 保持原样
+        return LogExpression(base_s, arg_s)
+
+    def __str__(self):
+        # 显示优化：log(b, x^n) → n*log(b, x)
+        arg = self.arg_expr
+        if isinstance(arg, AlgebraicExpression) and len(arg.terms) == 1:
+            term = arg.terms[0]
+            if isinstance(term, AlgebraicTerm) and len(term.vars) == 1 and term.coeff == Fraction(1, 1):
+                var, exp = list(term.vars.items())[0]
+                if exp != 1:
+                    inner_arg = AlgebraicExpression([AlgebraicTerm(Fraction(1, 1), {var: 1})])
+                    if exp < 0:
+                        return f"({exp})*log({self.base_expr}, {inner_arg})"
+                    return f"{exp}log({self.base_expr}, {inner_arg})"
+        return f"log({self.base_expr}, {self.arg_expr})"
+
+    def __repr__(self):
+        return f"LogExpression({self.base_expr}, {self.arg_expr})"
+
+    def __mul__(self, other):
+        """LogExpression * scalar/AlgebraicTerm"""
+        from algebra_base import Fraction
+        if isinstance(other, (int, Fraction)):
+            return self.__rmul__(other)
+        elif isinstance(other, AlgebraicTerm):
+            if not other.vars and other.coeff.denominator == 1:
+                return self.__rmul__(other.coeff)
+            return AlgebraicExpression([self])
+        return NotImplemented
+
+    def __rmul__(self, other):
+        """反向乘法：c * log(b, a) = log(b, a^c)"""
+        if isinstance(other, (int, Fraction)):
+            c = other if isinstance(other, Fraction) else Fraction(other, 1)
+            if c == Fraction(0, 1):
+                return AlgebraicExpression([AlgebraicTerm(Fraction(0, 1))])
+            if c == Fraction(1, 1):
+                return AlgebraicExpression([self])
+            # 先尝试简化 log 为常数
+            try:
+                simplified = self.simplify(None)
+            except Exception:
+                simplified = self
+            if isinstance(simplified, AlgebraicExpression) and len(simplified.terms) == 1:
+                term = simplified.terms[0]
+                if isinstance(term, AlgebraicTerm):
+                    return AlgebraicExpression([AlgebraicTerm(c) * term])
+            # c * log(b, a) → log(b, a^c)（利用幂规则）
+            if isinstance(c, Fraction) and c.denominator == 1:
+                new_arg = self._raise_to_power(self.arg_expr, c.numerator)
+                return AlgebraicExpression([LogExpression(self.base_expr, new_arg)])
+            # 分数系数暂不处理
+            return AlgebraicExpression([self])
+        return NotImplemented
+
+    @staticmethod
+    def _raise_to_power(expr, power):
+        """将表达式 expr 的每个变量的指数乘以 power"""
+        if isinstance(expr, AlgebraicExpression) and len(expr.terms) == 1:
+            term = expr.terms[0]
+            if isinstance(term, AlgebraicTerm):
+                new_vars = {}
+                for var, exp in term.vars.items():
+                    new_vars[var] = exp * power
+                return AlgebraicExpression([AlgebraicTerm(term.coeff, new_vars)])
+        # 回退：构造幂表达式
+        return expr
+
+    def __truediv__(self, other):
+        if isinstance(other, (int, Fraction)):
+            from copy import deepcopy
+            result = deepcopy(self)
+            return AlgebraicExpression([self]) / other
+        return NotImplemented
+
+    def substitute(self, var, expr, debug_callback=None):
+        """替换变量"""
+        from copy import deepcopy
+        new_self = deepcopy(self)
+        if hasattr(new_self.base_expr, 'substitute'):
+            new_self.base_expr = new_self.base_expr.substitute(var, expr, debug_callback)
+        if hasattr(new_self.arg_expr, 'substitute'):
+            new_self.arg_expr = new_self.arg_expr.substitute(var, expr, debug_callback)
+        return AlgebraicExpression([new_self])
+
+    def contains_var(self, var):
+        """检查是否包含指定变量"""
+        from algebra_solver import AlgebraicCalculator as _AC
+        _calc = _AC()
+        return (_calc._expr_contains_var(self.base_expr, var) or
+                _calc._expr_contains_var(self.arg_expr, var))
+
+
 # ========== 带平方根的项 TermWithSqrt ==========
 
 class TermWithSqrt:
@@ -690,8 +1043,16 @@ class TermWithSqrt:
     def __init__(self, coeff, sqrt_expr):
         if isinstance(coeff, AlgebraicTerm):
             self.coeff = coeff
+        elif isinstance(coeff, AlgebraicExpression):
+            # 如果是多表达式，提取第一项的系数，其余丢弃（应由调用方保证类型正确）
+            if len(coeff.terms) == 1 and isinstance(coeff.terms[0], AlgebraicTerm):
+                self.coeff = coeff.terms[0]
+            else:
+                raise TypeError(f'TermWithSqrt coeff must be AlgebraicTerm, got {type(coeff).__name__}')
+        elif isinstance(coeff, Fraction):
+            self.coeff = AlgebraicTerm(coeff)
         else:
-            self.coeff = AlgebraicTerm(coeff if isinstance(coeff, Fraction) else Fraction(coeff, 1))
+            self.coeff = AlgebraicTerm(Fraction(coeff, 1))
         self.sqrt_expr = sqrt_expr
 
     def __eq__(self, other):
@@ -845,7 +1206,7 @@ class TermWithSqrt:
         if hasattr(simplified_coeff, 'coeff') and simplified_coeff.coeff.numerator == 0:
             return AlgebraicExpression([AlgebraicTerm(Fraction(0, 1))])
 
-        if simplified_coeff != self.coeff or simplified_sqrt != self.sqrt_expr:
+        if isinstance(simplified_coeff, AlgebraicExpression) or simplified_coeff != self.coeff or simplified_sqrt != self.sqrt_expr:
             result = TermWithSqrt(simplified_coeff, simplified_sqrt)
             if debug_callback:
                 debug_callback(f"简化 TermWithSqrt 结果: {result}", level=2)
@@ -955,6 +1316,7 @@ class AlgebraicExpression:
         sqrt_terms = []  # SqrtExpression 类型
         term_with_sqrt_terms = []  # TermWithSqrt 类型
         fraction_terms = []  # FractionExpression 类型
+        log_terms = []  # LogExpression 类型
 
         for term in simplified_terms:
             if isinstance(term, FractionExpression):
@@ -965,6 +1327,8 @@ class AlgebraicExpression:
                 sqrt_terms.append(term)
             elif isinstance(term, TermWithSqrt):
                 term_with_sqrt_terms.append(term)
+            elif isinstance(term, LogExpression):
+                log_terms.append(term)
             else:
                 # 必须是 AlgebraicTerm 或可以转换为 AlgebraicTerm 的
                 if isinstance(term, AlgebraicTerm) and term.coeff.numerator == 0:
@@ -1049,12 +1413,13 @@ class AlgebraicExpression:
                             coeff_term = AlgebraicTerm(Fraction(count, 1))
                             term_with_sqrt_terms.append(TermWithSqrt(coeff_term, SqrtExpression(inner_expr)))
 
-            # 合并 TermWithSqrt 项（按 sqrt_expr 分组）
+            # 合并 TermWithSqrt 项（按 sqrt_expr + coeff变量结构 分组）
             tws_dict = {}
             for term in term_with_sqrt_terms:
-                key = str(term.sqrt_expr)
+                # key 包含 sqrt 内容和系数的变量结构，避免不同变量结构的系数被错误合并
+                key = (str(term.sqrt_expr), frozenset(term.coeff.vars.items()))
                 if key in tws_dict:
-                    # 合并系数
+                    # 合并系数（此时保证变量结构相同，不会抛出 ValueError）
                     existing = tws_dict[key]
                     new_coeff = existing.coeff + term.coeff
                     if isinstance(new_coeff, AlgebraicTerm) and new_coeff.coeff.numerator == 0:
@@ -1071,7 +1436,7 @@ class AlgebraicExpression:
                     merged_tws.append(term)
 
             # 组合所有项
-            all_terms = merged_regular + merged_abs + merged_tws
+            all_terms = merged_regular + merged_abs + merged_tws + log_terms
 
             # 如果没有任何项，返回零
             if not all_terms:
@@ -1090,7 +1455,7 @@ class AlgebraicExpression:
 
             # 将所有非分式项转换为分母为1的分式
             all_fractions = []
-            for term in regular_terms + abs_terms + sqrt_terms + term_with_sqrt_terms:
+            for term in regular_terms + abs_terms + sqrt_terms + term_with_sqrt_terms + log_terms:
                 if isinstance(term, AlgebraicTerm):
                     numerator = AlgebraicExpression([term])
                     denominator = AlgebraicExpression([AlgebraicTerm(Fraction(1, 1))])
@@ -1382,6 +1747,11 @@ class AlgebraicExpression:
                 new_num = term.numerator.substitute(var, expr, debug_callback)
                 new_den = term.denominator.substitute(var, expr, debug_callback)
                 return [FractionExpression(new_num, new_den)]
+            elif isinstance(term, LogExpression):
+                substituted = term.substitute(var, expr, debug_callback)
+                if isinstance(substituted, AlgebraicExpression):
+                    return substituted.terms
+                return [substituted]
             else:
                 return [deepcopy(term)]
 
@@ -1627,17 +1997,6 @@ class FractionExpression:
         try:
             if debug_callback:
                 debug_callback(f"【FractionExpression.simplify】开始化简: {self}", level=1)
-            # 如果分母是常数或简单项，即使在分子含根号时也可以处理
-            den_is_simple = (
-                isinstance(self.denominator, AlgebraicExpression) and
-                len(self.denominator.terms) == 1 and
-                isinstance(self.denominator.terms[0], AlgebraicTerm) and
-                not self.denominator.terms[0].vars
-            )
-            if (self._contains_sqrt(self.numerator) or self._contains_sqrt(self.denominator)) and not den_is_simple:
-                if debug_callback:
-                    debug_callback("分子或分母包含根号，跳过化简", level=2)
-                return self
             if hasattr(self, '_simplify_depth'):
                 depth = self._simplify_depth
                 if depth > 5:
@@ -1694,6 +2053,19 @@ class FractionExpression:
                             debug_callback("警告：FractionExpression.simplify 返回 None，使用零表达式", level=1)
                         return AlgebraicExpression([AlgebraicTerm(Fraction(0, 1))])
                     return simplified_result
+
+            # 分母含根号且不是简单项时，跳过后续的因式分解约分和常数除法
+            # （负指数处理已在上面完成，这里只保护根号相关的化简）
+            den_is_simple = (
+                isinstance(simplified_den, AlgebraicExpression) and
+                len(simplified_den.terms) == 1 and
+                isinstance(simplified_den.terms[0], AlgebraicTerm) and
+                not simplified_den.terms[0].vars
+            )
+            if (self._contains_sqrt(simplified_num) or self._contains_sqrt(simplified_den)) and not den_is_simple:
+                if debug_callback:
+                    debug_callback("分子或分母包含根号且分母非简单项，跳过后续化简", level=2)
+                return FractionExpression(simplified_num, simplified_den)
 
             num_str = str(simplified_num).replace(' ', '')
             den_str = str(simplified_den).replace(' ', '')
@@ -1916,6 +2288,13 @@ class FractionExpression:
 
 
 # ========== 分母有理化器 DenominatorRationalizer ==========
+
+    def contains_var(self, var):
+        from algebra_solver import AlgebraicCalculator as _AC
+        _calc = _AC()
+        return (_calc._expr_contains_var(self.numerator, var) or
+                _calc._expr_contains_var(self.denominator, var))
+
 
 class DenominatorRationalizer:
     @staticmethod
