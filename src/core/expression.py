@@ -1,6 +1,6 @@
 import re
 import math
-from algebra_base import Fraction, ExpressionType
+from core.base import Fraction, ExpressionType
 
 # ========== 代数项 AlgebraicTerm ==========
 
@@ -55,6 +55,15 @@ class AlgebraicTerm:
                 return AlgebraicExpression([LogExpression(other.base_expr,
                     LogExpression._raise_to_power(other.arg_expr, c.numerator))])
             return AlgebraicExpression([other])
+        elif isinstance(other, PowerTerm):
+            if self.is_constant():
+                c = self.coeff
+                if c == Fraction(1, 1):
+                    return AlgebraicExpression([other])
+                if c == Fraction(0, 1):
+                    return AlgebraicExpression([AlgebraicTerm(Fraction(0, 1))])
+                return AlgebraicExpression([self, other])
+            return AlgebraicExpression([self, other])
         return NotImplemented
 
     def __truediv__(self, other):
@@ -89,10 +98,25 @@ class AlgebraicTerm:
         return self.vars == other.vars
 
     def is_constant(self):
-        return len(self.vars) == 0
+        if len(self.vars) == 0:
+            return True
+        from core.base import KNOWN_MATH_CONSTANTS
+        return all(v in KNOWN_MATH_CONSTANTS for v in self.vars)
 
     def contains_var(self, var):
+        from core.base import KNOWN_MATH_CONSTANTS
+        if var in KNOWN_MATH_CONSTANTS:
+            return False
         return var in self.vars
+
+    def get_true_variables(self):
+        """返回真正的变量（排除数学常数如 e）"""
+        from core.base import KNOWN_MATH_CONSTANTS
+        return {k: v for k, v in self.vars.items() if k not in KNOWN_MATH_CONSTANTS}
+
+    def has_true_variable(self):
+        """检查是否包含至少一个真正的变量（非数学常数）"""
+        return len(self.get_true_variables()) > 0
 
     def simplify(self, debug_callback=None):
         return AlgebraicExpression([self])
@@ -339,7 +363,7 @@ class AbsoluteValue:
             inner = AlgebraicExpression([inner])
 
         # 尝试将条件化简为线性不等式（单变量线性表达式）
-        from algebra_base import Fraction
+        from core.base import Fraction
         coeff = Fraction(0, 1)
         const = Fraction(0, 1)
         var = None
@@ -464,6 +488,33 @@ class SqrtExpression:
                 if debug_callback:
                     debug_callback(f"常数完全平方根: √({const}) = {result}", level=2)
                 return AlgebraicExpression([AlgebraicTerm(result)])
+            # 分母有理化: √(num/den) = √(num*den)/den
+            if den != 1:
+                # 提取分子的平方因子
+                new_num = abs(num) * den
+                extracted = 1
+                remaining = new_num
+                for factor in range(2, int(math.isqrt(new_num)) + 1):
+                    sq = factor * factor
+                    while remaining % sq == 0:
+                        extracted *= factor
+                        remaining //= sq
+                # 构造结果: (extracted * √(remaining)) / den
+                from core.base import Fraction as Fr
+                coeff = Fraction(extracted, den)
+                if remaining == 1:
+                    return AlgebraicExpression([AlgebraicTerm(coeff)])
+                # 判断符号
+                if num < 0:
+                    if debug_callback:
+                        debug_callback(f"负数根号 {const}，保留根号形式", level=3)
+                    return self
+                sqrt_inner = AlgebraicExpression([AlgebraicTerm(Fraction(remaining, 1))])
+                sqrt_expr = SqrtExpression(sqrt_inner)
+                term = TermWithSqrt(AlgebraicTerm(coeff), sqrt_expr)
+                if debug_callback:
+                    debug_callback(f"根号有理化: √({const}) = {term}", level=2)
+                return AlgebraicExpression([term])
             elif debug_callback:
                 debug_callback(f"常数 {const} 不是完全平方数，保留根号形式", level=3)
         # 尝试化简嵌套根号 √(a + b√c)
@@ -611,9 +662,115 @@ class SqrtExpression:
             i += 1 if i == 2 else 2
         return max_square
 
+    def _detect_perfect_square_trinomial(self, expr, debug_callback=None):
+        """检测完全平方三项式: ax²+bx+c = (px+q)²"""
+        if not isinstance(expr, AlgebraicExpression):
+            return None
+        if len(expr.terms) < 2 or len(expr.terms) > 3:
+            return None
+        # 收集关于单个变量的项
+        var = None
+        deg2_coeff = Fraction(0, 1)
+        deg1_coeff = Fraction(0, 1)
+        deg0_coeff = Fraction(0, 1)
+        for term in expr.terms:
+            if not isinstance(term, AlgebraicTerm):
+                return None
+            true_vars = term.get_true_variables()
+            if len(true_vars) == 0:
+                deg0_coeff = deg0_coeff + term.coeff
+            elif len(true_vars) == 1:
+                v, exp = list(true_vars.items())[0]
+                if exp == 2:
+                    if var is None:
+                        var = v
+                    elif var != v:
+                        return None
+                    deg2_coeff = deg2_coeff + term.coeff
+                elif exp == 1:
+                    if var is None:
+                        var = v
+                    elif var != v:
+                        return None
+                    deg1_coeff = deg1_coeff + term.coeff
+                else:
+                    return None
+            else:
+                return None
+        if var is None or deg2_coeff == Fraction(0, 1):
+            return None
+
+        # 处理分数系数：通分后检测完全平方
+        # 计算所有系数的公共分母 LCM
+        def lcm(a, b):
+            return a // math.gcd(a, b) * b if a > 0 and b > 0 else max(a, b)
+        common_den = 1
+        for coeff in [deg2_coeff, deg1_coeff, deg0_coeff]:
+            if coeff.denominator > 0:
+                common_den = lcm(common_den, coeff.denominator)
+        # 缩放系数到整数
+        scaled_a = deg2_coeff.numerator * (common_den // deg2_coeff.denominator)
+        scaled_b = deg1_coeff.numerator * (common_den // deg1_coeff.denominator) if deg1_coeff != Fraction(0, 1) else 0
+        scaled_c = deg0_coeff.numerator * (common_den // deg0_coeff.denominator) if deg0_coeff != Fraction(0, 1) else 0
+
+        # 公共分母是否为完全平方？
+        den_root = self._is_perfect_square(common_den)
+        if den_root is None:
+            return None  # 分母不是完全平方，不能形成 (px+q)²/den 形式
+
+        # 检查缩放后的三项式是否为完全平方: a*x² + b*x + c = (px+q)²
+        a_root = self._is_perfect_square(scaled_a) if scaled_a > 0 else None
+        c_root = self._is_perfect_square(abs(scaled_c)) if scaled_c != 0 else 0
+        if a_root is None:
+            return None
+        p_val = a_root
+        # q = sign(b) * sqrt(|c|) — 但需要验证 2pq = b
+        if scaled_c < 0:
+            return None  # c < 0 can't be a real square
+        q_val = c_root if isinstance(c_root, int) else 0
+
+        # b = 2 * p * q → q = b / (2p)
+        # Verify: 2*p*q = |scaled_b|
+        if scaled_b == 0:
+            q_signed = 0
+            if scaled_a * scaled_c == 0 and scaled_a != 0 and scaled_c == 0:
+                pass  # (px)² form
+        elif p_val > 0 and scaled_b % (2 * p_val) == 0:
+            q_signed = scaled_b // (2 * p_val)
+        else:
+            # Try: maybe p can be negative
+            if scaled_b % (2 * (-p_val)) == 0:
+                q_signed = scaled_b // (2 * (-p_val))
+                p_val = -p_val
+            else:
+                return None
+
+        # Verify: p² = scaled_a and q² = scaled_c
+        if p_val * p_val != scaled_a:
+            return None
+        if q_signed * q_signed != scaled_c:
+            return None
+
+        # 构造结果: |(p*var + q)/√den| = |p*var + q|/den_root
+        p = Fraction(p_val, den_root)
+        q = Fraction(q_signed, den_root)
+        inner = AlgebraicExpression([
+            AlgebraicTerm(p, {var: 1}),
+            AlgebraicTerm(q, {})
+        ])
+        inner_simplified = inner.simplify()
+        if debug_callback:
+            debug_callback(f"检测到完全平方三项式: ({inner_simplified})²", level=2)
+        return AbsoluteValue(inner_simplified)
+
     def _extract_square_factors(self, expr, debug_callback=None):
         if debug_callback:
             debug_callback(f"开始提取平方因子: √({expr})", level=2)
+
+        # 首先检测完全平方三项式
+        perfect_square = self._detect_perfect_square_trinomial(expr, debug_callback)
+        if perfect_square is not None:
+            return AlgebraicExpression([perfect_square])
 
         # 多项表达式：提取各项系数公因子中的完全平方因子
         if isinstance(expr, AlgebraicExpression) and len(expr.terms) > 1:
@@ -821,6 +978,132 @@ class SqrtExpression:
         return AlgebraicExpression([other]) - self
 
 
+# ========== 幂表达式 PowerTerm ==========
+
+class PowerTerm:
+    """表示幂表达式 base^exp，其中指数可能包含变量（如 e^x, a^b 等）"""
+
+    def __init__(self, base, exp):
+        self.base = base
+        self.exp = exp
+
+    def __eq__(self, other):
+        if not isinstance(other, PowerTerm):
+            return False
+        return str(self.base) == str(other.base) and str(self.exp) == str(other.exp)
+
+    def simplify(self, debug_callback=None):
+        if debug_callback:
+            debug_callback(f"开始化简幂表达式: {self}", level=1)
+        if hasattr(self.base, 'simplify'):
+            base_s = self.base.simplify(debug_callback)
+        else:
+            base_s = self.base
+        if hasattr(self.exp, 'simplify'):
+            exp_s = self.exp.simplify(debug_callback)
+        else:
+            exp_s = self.exp
+        # 如果指数是常数整数，直接计算
+        if isinstance(exp_s, AlgebraicExpression) and exp_s.is_constant():
+            exp_val = exp_s.terms[0].coeff
+            if exp_val.denominator == 1:
+                try:
+                    return base_s ** exp_val.numerator
+                except Exception:
+                    pass
+        # 底数为0: 0^exp = 0
+        if isinstance(base_s, AlgebraicExpression) and base_s.is_zero():
+            return AlgebraicExpression([AlgebraicTerm(Fraction(0, 1))])
+        # 指数为0: base^0 = 1
+        if isinstance(exp_s, AlgebraicExpression) and exp_s.is_zero():
+            return AlgebraicExpression([AlgebraicTerm(Fraction(1, 1))])
+        # 指数为1: base^1 = base
+        if isinstance(exp_s, AlgebraicExpression) and len(exp_s.terms) == 1:
+            term = exp_s.terms[0]
+            if isinstance(term, AlgebraicTerm) and term.is_constant() and term.coeff == Fraction(1, 1):
+                return base_s
+        return PowerTerm(base_s, exp_s)
+
+    def is_constant(self):
+        return (hasattr(self.base, 'is_constant') and self.base.is_constant() and
+                hasattr(self.exp, 'is_constant') and self.exp.is_constant())
+
+    def contains_var(self, var):
+        from core.base import KNOWN_MATH_CONSTANTS
+        if var in KNOWN_MATH_CONSTANTS:
+            return False
+        result = False
+        if hasattr(self.base, 'contains_var'):
+            result = result or self.base.contains_var(var)
+        if hasattr(self.exp, 'contains_var'):
+            result = result or self.exp.contains_var(var)
+        if hasattr(self.base, '_expr_contains_var'):
+            result = result or self.base._expr_contains_var(self.base, var)
+        if hasattr(self.exp, '_expr_contains_var'):
+            result = result or self.exp._expr_contains_var(self.exp, var)
+        return result
+
+    def __str__(self):
+        base_str = str(self.base)
+        exp_str = str(self.exp)
+        # 如果底数包含运算符，加括号
+        if isinstance(self.base, AlgebraicExpression) and len(self.base.terms) != 1:
+            base_str = f"({base_str})"
+        elif any(op in base_str for op in '+-') and not base_str.startswith('('):
+            base_str = f"({base_str})"
+        return f"{base_str}^{exp_str}"
+
+    def __repr__(self):
+        return f"PowerTerm({repr(self.base)}, {repr(self.exp)})"
+
+    def __mul__(self, other):
+        if isinstance(other, (int, Fraction)):
+            if other == Fraction(0, 1):
+                return AlgebraicExpression([AlgebraicTerm(Fraction(0, 1))])
+            if other == Fraction(1, 1):
+                return AlgebraicExpression([self])
+            return AlgebraicExpression([AlgebraicTerm(other), self])
+        elif isinstance(other, AlgebraicTerm):
+            if other.is_constant():
+                c = other.coeff
+                if c == Fraction(1, 1):
+                    return AlgebraicExpression([self])
+                if c == Fraction(0, 1):
+                    return AlgebraicExpression([AlgebraicTerm(Fraction(0, 1))])
+                return AlgebraicExpression([other, self])
+            return AlgebraicExpression([other, self])
+        elif isinstance(other, PowerTerm):
+            if str(self.base) == str(other.base):
+                # 同底数幂: base^e1 * base^e2 = base^(e1+e2)
+                new_exp = self.exp + other.exp
+                if hasattr(new_exp, 'simplify'):
+                    new_exp = new_exp.simplify()
+                return AlgebraicExpression([PowerTerm(self.base, new_exp)])
+            return AlgebraicExpression([self, other])
+        return AlgebraicExpression([self]) * other
+
+    def __rmul__(self, other):
+        return self.__mul__(other)
+
+    def __pow__(self, other):
+        # (base^exp)^n = base^(exp*n)
+        if isinstance(other, int) and other >= 0:
+            new_exp = self.exp * other
+            if hasattr(new_exp, 'simplify'):
+                new_exp = new_exp.simplify()
+            return PowerTerm(self.base, new_exp)
+        return AlgebraicExpression([self]) ** other
+
+    def substitute(self, var, expr, debug_callback=None):
+        from copy import deepcopy
+        new_self = deepcopy(self)
+        if hasattr(new_self.base, 'substitute'):
+            new_self.base = new_self.base.substitute(var, expr, debug_callback)
+        if hasattr(new_self.exp, 'substitute'):
+            new_self.exp = new_self.exp.substitute(var, expr, debug_callback)
+        return AlgebraicExpression([new_self])
+
+
 # ========== 对数表达式 LogExpression ==========
 
 class LogExpression:
@@ -963,7 +1246,7 @@ class LogExpression:
 
     def __mul__(self, other):
         """LogExpression * scalar/AlgebraicTerm"""
-        from algebra_base import Fraction
+        from core.base import Fraction
         if isinstance(other, (int, Fraction)):
             return self.__rmul__(other)
         elif isinstance(other, AlgebraicTerm):
@@ -1029,7 +1312,7 @@ class LogExpression:
 
     def contains_var(self, var):
         """检查是否包含指定变量"""
-        from algebra_solver import AlgebraicCalculator as _AC
+        from core.solver import AlgebraicCalculator as _AC
         _calc = _AC()
         return (_calc._expr_contains_var(self.base_expr, var) or
                 _calc._expr_contains_var(self.arg_expr, var))
@@ -1317,6 +1600,7 @@ class AlgebraicExpression:
         term_with_sqrt_terms = []  # TermWithSqrt 类型
         fraction_terms = []  # FractionExpression 类型
         log_terms = []  # LogExpression 类型
+        power_terms = []  # PowerTerm 类型
 
         for term in simplified_terms:
             if isinstance(term, FractionExpression):
@@ -1329,6 +1613,8 @@ class AlgebraicExpression:
                 term_with_sqrt_terms.append(term)
             elif isinstance(term, LogExpression):
                 log_terms.append(term)
+            elif isinstance(term, PowerTerm):
+                power_terms.append(term)
             else:
                 # 必须是 AlgebraicTerm 或可以转换为 AlgebraicTerm 的
                 if isinstance(term, AlgebraicTerm) and term.coeff.numerator == 0:
@@ -1435,8 +1721,11 @@ class AlgebraicExpression:
                 if term.coeff.coeff.numerator != 0:
                     merged_tws.append(term)
 
+            # PowerTerm 项：保持原样不合并（避免加法/乘法混淆）
+            merged_power = list(power_terms)
+
             # 组合所有项
-            all_terms = merged_regular + merged_abs + merged_tws + log_terms
+            all_terms = merged_regular + merged_abs + merged_tws + merged_power + log_terms
 
             # 如果没有任何项，返回零
             if not all_terms:
@@ -1455,12 +1744,12 @@ class AlgebraicExpression:
 
             # 将所有非分式项转换为分母为1的分式
             all_fractions = []
-            for term in regular_terms + abs_terms + sqrt_terms + term_with_sqrt_terms + log_terms:
+            for term in regular_terms + abs_terms + sqrt_terms + term_with_sqrt_terms + log_terms + power_terms:
                 if isinstance(term, AlgebraicTerm):
                     numerator = AlgebraicExpression([term])
                     denominator = AlgebraicExpression([AlgebraicTerm(Fraction(1, 1))])
                     all_fractions.append(FractionExpression(numerator, denominator))
-                elif isinstance(term, (AbsoluteValue, SqrtExpression, TermWithSqrt)):
+                elif isinstance(term, (AbsoluteValue, SqrtExpression, TermWithSqrt, PowerTerm, LogExpression)):
                     numerator = AlgebraicExpression([term])
                     denominator = AlgebraicExpression([AlgebraicTerm(Fraction(1, 1))])
                     all_fractions.append(FractionExpression(numerator, denominator))
@@ -1685,23 +1974,24 @@ class AlgebraicExpression:
         return NotImplemented
 
     def __pow__(self, exp):
-        if not isinstance(exp, int):
-            raise TypeError("指数必须是整数")
-        if exp == 0:
-            return AlgebraicExpression([AlgebraicTerm(Fraction(1, 1))])
-        if exp == 1:
-            return self
-        if exp == 2:
-            return self * self
-        result = self
-        for _ in range(abs(exp) - 1):
-            result = result * self
-        if exp < 0:
-            return FractionExpression(
-                AlgebraicExpression([AlgebraicTerm(Fraction(1, 1))]),
-                result
-            )
-        return result
+        if isinstance(exp, int):
+            if exp == 0:
+                return AlgebraicExpression([AlgebraicTerm(Fraction(1, 1))])
+            if exp == 1:
+                return self
+            if exp == 2:
+                return self * self
+            result = self
+            for _ in range(abs(exp) - 1):
+                result = result * self
+            if exp < 0:
+                return FractionExpression(
+                    AlgebraicExpression([AlgebraicTerm(Fraction(1, 1))]),
+                    result
+                )
+            return result
+        # 非整数指数：返回 PowerTerm 符号幂表达式
+        return AlgebraicExpression([PowerTerm(self, exp)])
 
     def is_constant(self):
         return len(self.terms) == 1 and isinstance(self.terms[0], AlgebraicTerm) and self.terms[0].is_constant()
@@ -1748,6 +2038,11 @@ class AlgebraicExpression:
                 new_den = term.denominator.substitute(var, expr, debug_callback)
                 return [FractionExpression(new_num, new_den)]
             elif isinstance(term, LogExpression):
+                substituted = term.substitute(var, expr, debug_callback)
+                if isinstance(substituted, AlgebraicExpression):
+                    return substituted.terms
+                return [substituted]
+            elif isinstance(term, PowerTerm):
                 substituted = term.substitute(var, expr, debug_callback)
                 if isinstance(substituted, AlgebraicExpression):
                     return substituted.terms
@@ -2127,12 +2422,12 @@ class FractionExpression:
                                 debug_callback(f"因式分解约分: ({num_str})/({den_str}) → {cancelled_str}", level=2)
                             if '/' not in cancelled_str:
                                 # 分母约掉，只返回分子
-                                from algebra_solver import AlgebraicCalculator as _AC
+                                from core.solver import AlgebraicCalculator as _AC
                                 return _AC().parse_expression(cancelled_str)
                             else:
                                 # 仍有分式，递归处理
                                 num_s, den_s = cancelled_str.split('/', 1)
-                                from algebra_solver import AlgebraicCalculator as _AC
+                                from core.solver import AlgebraicCalculator as _AC
                                 _calc = _AC()
                                 return FractionExpression(
                                     _calc.parse_expression(num_s),
@@ -2290,7 +2585,7 @@ class FractionExpression:
 # ========== 分母有理化器 DenominatorRationalizer ==========
 
     def contains_var(self, var):
-        from algebra_solver import AlgebraicCalculator as _AC
+        from core.solver import AlgebraicCalculator as _AC
         _calc = _AC()
         return (_calc._expr_contains_var(self.numerator, var) or
                 _calc._expr_contains_var(self.denominator, var))

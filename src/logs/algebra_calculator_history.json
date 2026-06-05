@@ -1,0 +1,137 @@
+[
+  {
+    "timestamp": "2026-06-05 19:21:09",
+    "type": "测试-方程",
+    "expression": "x+y=10",
+    "result": "多变量方程的解:\n  x = -y+10\n  y = -x+10",
+    "status": "success",
+    "debug_lines": 22,
+    "error": null
+  },
+  {
+    "timestamp": "2026-06-05 19:21:09",
+    "type": "测试-方程",
+    "expression": "(x+y)^2=0",
+    "result": "多变量方程的解:\n  x = -y\n  y = -x",
+    "status": "success",
+    "debug_lines": 63,
+    "error": null
+  },
+  {
+    "timestamp": "2026-06-05 19:21:10",
+    "type": "测试-方程",
+    "expression": "1/(x+1) = 2/(y-1)",
+    "result": "多变量方程的解:\n  x = (1/2)y-3/2\n  y = 2x+3",
+    "status": "success",
+    "debug_lines": 98,
+    "error": null
+  },
+  {
+    "timestamp": "2026-06-05 19:21:10",
+    "type": "测试-方程",
+    "expression": "(x+y)/(x-y) = 3",
+    "result": "多变量方程的解:\n  x = 2y\n  y = (1/2)x",
+    "status": "success",
+    "debug_lines": 131,
+    "error": null
+  },
+  {
+    "timestamp": "2026-06-05 19:21:10",
+    "type": "测试-方程",
+    "expression": "1/x + 1/y = 1",
+    "result": "多变量方程的解:\n  x = y/(y-1)\n  y = x/(x-1)",
+    "status": "success",
+    "debug_lines": 194,
+    "error": null
+  },
+  {
+    "timestamp": "2026-06-05 19:21:10",
+    "type": "测试-方程",
+    "expression": "1/x+1/y=1/(x+y)",
+    "result": "多变量方程的解:\n  x = 无实数解\n  y = 无实数解",
+    "status": "success",
+    "debug_lines": 259,
+    "error": null
+  },
+  {
+    "timestamp": "2026-06-05 19:21:10",
+    "type": "测试-方程",
+    "expression": "1/x+1/y=5/(x+y)",
+    "result": "多变量方程的解:\n  x = (3/2)y+(y√(5))/2 或 (3/2)y-(y√(5))/2\n  y = (3/2)x+(x√(5))/2 或 (3/2)x-(x√(5))/2",
+    "status": "success",
+    "debug_lines": 444,
+    "error": null
+  },
+  {
+    "timestamp": "2026-06-05 19:21:10",
+    "type": "测试-方程",
+    "expression": "x/y + y/x = xy",
+    "result": "多变量方程的解:\n  x = √((-y^2)/(-y^2+1)) 或 -√((-y^2)/(-y^2+1))\n  y = √((-x^2)/(-x^2+1)) 或 -√((-x^2)/(-x^2+1))",
+    "status": "success",
+    "debug_lines": 509,
+    "error": null
+  },
+  {
+    "timestamp": "2026-06-05 19:21:10",
+    "type": "测试-方程",
+    "expression": "x/y + y/x = 4x^2y",
+    "result": "多变量方程的解:\n  x = 无法显示（含参求根公式过长），已化简：x^2/y-4x^3y+y\n  y = √((-x^2)/(-4x^3+1)) 或 -√((-x^2)/(-4x^3+1))",
+    "status": "success",
+    "debug_lines": 563,
+    "error": null
+  },
+  {
+    "timestamp": "2026-06-05 19:25:26",
+    "type": "测试-其他",
+    "expression": "-xxx+11xx-10x=70",
+    "result": "x = 3.933471055 或 9.035986063 或 -1.969457117",
+    "status": "success",
+    "debug_lines": 73,
+    "error": null
+  },
+  {
+    "timestamp": "2026-06-05 19:25:27",
+    "type": "测试-其他",
+    "expression": "xx+yy-2x+6y+2=0;xx+yy+4x-2y-4=0",
+    "result": "x = -11/25+(8√(14))/25, y = -27/25+(6√(14))/25 或 x = -11/25-(8√(14))/25, y = -27/25-(6√(14))/25",
+    "status": "success",
+    "debug_lines": 940,
+    "error": null
+  },
+  {
+    "timestamp": "2026-06-05 19:25:27",
+    "type": "测试-其他",
+    "expression": "y=kx-√(3)k;y=√(2)x",
+    "result": "k = y/((-y+√(6))/(-√(2))), x = (-y)/(-√(2))",
+    "status": "success",
+    "debug_lines": 2163,
+    "error": null
+  },
+  {
+    "timestamp": "2026-06-05 19:25:27",
+    "type": "测试-其他",
+    "expression": "(1+x)*e^x=1",
+    "result": "目前不支持求解含幂表达式的方程，已化简：x-1+e^x+e^x",
+    "status": "success",
+    "debug_lines": 2284,
+    "error": null
+  },
+  {
+    "timestamp": "2026-06-05 19:25:27",
+    "type": "测试-其他",
+    "expression": "xx/4+yy/3=1;x-2=-2x;y=2(c-y)",
+    "result": "c = √(6), x = 2/3, y = (2√(6))/3 或 c = -√(6), x = 2/3, y = -(2√(6))/3",
+    "status": "success",
+    "debug_lines": 3071,
+    "error": null
+  },
+  {
+    "timestamp": "2026-06-05 19:25:27",
+    "type": "测试-其他",
+    "expression": "a/x-2x-2+a=0",
+    "result": "多变量方程的解:\n  a = 2x\n  x = (1/4)a-1/2+|((1/4)a+1/2)| 或 (1/4)a-1/2+|((-1/4)a-1/2)|",
+    "status": "success",
+    "debug_lines": 3237,
+    "error": null
+  }
+]

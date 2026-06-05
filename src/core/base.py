@@ -1,5 +1,13 @@
 import math
 
+# 数学常数集合 — 这些字母代表数学常数而非变量
+KNOWN_MATH_CONSTANTS = frozenset({'e'})
+
+# 数学常数的近似值（用于需要数值计算的场景）
+MATH_CONSTANT_VALUES = {
+    'e': (2718281828459045, 1000000000000000),  # e ≈ 2.71828
+}
+
 
 class ExpressionType:
     """表达式类型枚举（保持简单，可不依赖Enum）"""

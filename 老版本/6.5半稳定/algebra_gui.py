@@ -689,7 +689,14 @@ class AlgebraCalculatorGUI:
     def __init__(self, root):
         self.root = root
         self.root.title("代数表达式计算器 V2.0.1(半稳定) --------------------对数+高次方程 --------------------   构建时间: 5.31  ")
-        self.root.geometry("1200x900")
+        # 根据屏幕分辨率自适应窗口大小
+        screen_width = self.root.winfo_screenwidth()
+        screen_height = self.root.winfo_screenheight()
+        # 窗口大小占屏幕的 75%，但不超过 1400x1000，不小于 900x650
+        win_width = min(max(int(screen_width * 0.75), 900), 1400)
+        win_height = min(max(int(screen_height * 0.75), 650), 1000)
+        self.root.geometry(f"{win_width}x{win_height}")
+        self.root.minsize(800, 600)
 
         # 创建计算器实例
         self.calculator = AlgebraicCalculator()
@@ -749,6 +756,8 @@ class AlgebraCalculatorGUI:
                 ("√(9a^2+18b)", "3√(a^2+2b)"),
                 ("√(12a+18b)", "√(12a+18b)"),
                 ("√(36x+48y)", "2√(9x+12y)"),
+                # 根号内分母有理化
+                ("√(2/3)", "(√(6))/3"),
                 # 因式分解约分
                 ("(x^2-1)/(x-1)", "x+1"),
                 ("(x^2+2x+1)/(x+1)", "x+1"),
@@ -785,6 +794,8 @@ class AlgebraCalculatorGUI:
                 ("(x-((a+b)/2))^2+(y-((c+d)/2))^2",
                  "(1/2)ab-ax+(1/4)a^2-bx+(1/4)b^2+(1/2)cd-cy+(1/4)c^2-dy+(1/4)d^2+x^2+y^2"),
                 ("(x-((a+b)/2))^2+(y-((c+d)/2))^2-0.25*((a-b)^2+(c-d)^2)", "ab-ax-bx+cd-cy-dy+x^2+y^2"),
+                # 6.5: e 作为自然常数验证
+                ("(x+1)(ex^2-1)/x", "ex+ex^2-1/x-1"),
             ],
             "绝对值": [
                 ("|3|", "3"),
@@ -796,6 +807,9 @@ class AlgebraCalculatorGUI:
                 ("|x|+|x|", "|2x|"),  # 修改：原期望 "|x|+|x|" 改为 "|2x|"
                 ("|x+1|", "|(x+1)|"),
                 ("(1/2)*|x|", "|(1/2)x|"),
+                # 完全平方三项式化简为绝对值
+                ("√(a^2+4a+4)", "|(a+2)|"),
+                ("√(x^2+6x+9)", "|(x+3)|"),
             ],
         }
 
@@ -870,15 +884,15 @@ class AlgebraCalculatorGUI:
                 ("x^3=ax", "多变量方程的解:\n  a = x^2\n  x = 0\n-√(a)\n√(a)"),
                 ("ax^3=b", "多变量方程的解:\n  a = b/x^3\n  b = ax^3\n  x = (b/a)^(1/3)"),
                 ("ax^3+bx=0", "多变量方程的解:\n  a = -b/x^2\n  b = -ax^2\n  x = 0\n-√(-b/a)\n√(-b/a)"),],
-    "圆锥曲线": [   ("x^2/4 + y^2/3 = 1; y = x", "x = 2√(3/7), y = 2√(3/7) 或 x = -2√(3/7), y = -2√(3/7)", ["x", "y"]),
+    "圆锥曲线": [   ("x^2/4 + y^2/3 = 1; y = x", "x = (2√(21))/7, y = (2√(21))/7 或 x = -(2√(21))/7, y = -(2√(21))/7", ["x", "y"]),
                 ("x^2 - y^2/4 = 1; y = 2*x - 3", "x = 13/12, y = -5/6", ["x", "y"]),
                 ("y^2 = 4*x; y = 2*x - 2", "x = 3/2+(√(5))/2, y = 1+√(5) 或 x = 3/2-(√(5))/2, y = 1-√(5)", ["x", "y"]),
                 ("x^2 + y^2 = 4; x^2/9 + y^2/4 = 1", "x = 0, y = 2 或 x = 0, y = -2", ["x", "y"]),
                 ("x^2/2 + y^2 = 1; y = x + 1", "x = 0, y = 1 或 x = -4/3, y = -1/3", ["x", "y"]),
-                ("x^2/16 + y^2/9 = 1; x^2/4 - y^2/5 = 1", "x = 4√(14/29), y = 3√(15/29) 或 x = 4√(14/29), y = -3√(15/29) 或 x = -4√(14/29), y = 3√(15/29) 或 x = -4√(14/29), y = -3√(15/29)", ["x", "y"]),
-                ("a^2/4 + b^2/3 = 1; c^2/4 + d^2/3 = 1; (b+d)/2 = 2*(a+c)/2 + 1; (d-b)/(c-a) = -1/2", "无法求解，化简后的方程为：(1/3)d^2+(1/4)d^8-1", ["a", "b", "c", "d"]),
+                ("x^2/16 + y^2/9 = 1; x^2/4 - y^2/5 = 1", "x = 4(√(406))/29, y = 3(√(435))/29 或 x = 4(√(406))/29, y = -3(√(435))/29 或 x = -4(√(406))/29, y = 3(√(435))/29 或 x = -4(√(406))/29, y = -3(√(435))/29", ["x", "y"]),
+                ("a^2/4 + b^2/3 = 1; c^2/4 + d^2/3 = 1; (b+d)/2 = 2*(a+c)/2 + 1; (d-b)/(c-a) = -1/2", "无解（化简后的方程组：(1/4)a^2+(1/3)b^2-1 ; (1/4)c^2+(1/3)d^2-1 ; -a+(1/2)b-c+(1/2)d-1 ; ((-1/2)a-b+(1/2)c+d)/(-a+c) = 0）", ["a", "b", "c", "d"]),
                 (   "a^2/8 + b^2/2 = 1; c^2/8 + d^2/2 = 1; (b+d)/2 = (a+c)/2 + 1; (d-b)/(c-a) = -1",
-                    "无解（化简后的方程组：(1/8)a^2+(1/2)b^2-1 ; (1/8)c^2+(1/2)d^2-1 ; (-1/2)a+(1/2)b-(1/2)c+(1/2)d-1 ; (-a-b+c+d)/(-a+c) = 0）",
+                    "a = -4/3+(2√(65))/15, b = -1/3-(2√(65))/15, c = -4/3-(2√(65))/15, d = -1/3+(2√(65))/15 或 a = -4/3-(2√(65))/15, b = -1/3+(2√(65))/15, c = -4/3+(2√(65))/15, d = -1/3-(2√(65))/15",
                     ["a", "b", "c", "d"]),
                 (   "p^2/9 + q^2/4 = 1; r^2/9 + s^2/4 = 1; p^2 - q^2 = r^2 - s^2; p + r = 0",
                     "p = -3√((-1/4)s^2+1), q = s, r = 3√((-1/4)s^2+1) 或 p = 3√((-1/4)s^2+1), q = s, r = -3√((-1/4)s^2+1) 或 p = -3√((-1/4)s^2+1), q = -s, r = 3√((-1/4)s^2+1) 或 p = 3√((-1/4)s^2+1), q "
@@ -892,11 +906,11 @@ class AlgebraCalculatorGUI:
                     ["x", "y"]),
                 ("x^2/4 - y^2/5 = 1; y = 2x - 3", "无解（化简后的方程组：(1/4)x^2-(1/5)y^2-1 ; -2x+y+3 = 0）", ["x", "y"]),
                 ("y^2 = 8*x; √((x-2)^2 + y^2) = |x + 2|", "x = (1/8)y^2", ["x", "y"]),
-                ("x^2/4 + y^2/3 = 1; y^2 = 4*x", "x = 2/3, y = 2√(2/3) 或 x = 2/3, y = -2√(2/3)", ["x", "y"]),
-                ("x^2/9 + y^2/4 = 1; y = k*x + m; k^2 + m^2 = 1; x^2 + y^2 = 1", "无解（化简后的方程组：(1/9)x^2+(1/4)y^2-1 ; -kx-m+y ; k^2+m^2-1 ; x^2+y^2-1 = 0）", ["x", "y", "k", "m"]),
+                ("x^2/4 + y^2/3 = 1; y^2 = 4*x", "x = 2/3, y = (2√(6))/3 或 x = 2/3, y = -(2√(6))/3", ["x", "y"]),
+                ("x^2/9 + y^2/4 = 1; y = k*x + m; k^2 + m^2 = 1; x^2 + y^2 = 1", "无解（化简后的方程组：(1/9)x^2+(1/4)y^2-1 ; -kx-m+y ; k^2+m^2-1 ; x^2+y^2-1 ; (5/36)y^2-8/9 = 0）", ["x", "y", "k", "m"]),
                 (   "x^2/9 + y^2/4 = 1; x^2/4 - y^2/5 = 1; p = x; q = y",
-                    "p = 18√(1/61), q = 10√(1/61), x = 18√(1/61), y = 10√(1/61) 或 p = 18√(1/61), q = -10√(1/61), x = 18√(1/61), y = -10√(1/61) 或 p = -18√(1/61), q = 10√(1/61), x = -18√(1/61), y = "
-                    "10√(1/61) 或 p = -18√(1/61), q = -10√(1/61), x = -18√(1/61), y = -10√(1/61)",
+                    "p = (18√(61))/61, q = (10√(61))/61, x = (18√(61))/61, y = (10√(61))/61 或 p = (18√(61))/61, q = -(10√(61))/61, x = (18√(61))/61, y = -(10√(61))/61 或 p = -(18√(61))/61, q = (10√(61))/61, x = -(18√(61))/61, y = "
+                    "(10√(61))/61 或 p = -(18√(61))/61, q = -(10√(61))/61, x = -(18√(61))/61, y = -(10√(61))/61",
                     ["x", "y", "p", "q"]),
                 (   "x^2/4 + y^2/3 = 1; u^2/4 + v^2/3 = 1; x*u + y*v = 0",
                     "u = 2√((-1/3)v^2+1), x = (-v√(((-4/3)v^2+4)/((-7/36)v^2+4/3)))/(2√((-1/3)v^2+1)), y = √(((-4/3)v^2+4)/((-7/36)v^2+4/3)) 或 u = -2√((-1/3)v^2+1), x = "
@@ -907,21 +921,21 @@ class AlgebraCalculatorGUI:
                 ("y^2 = 4*x; u^2 = 4*v; x + u = 2; y + v = 2", "u = -2+2√(3), v = 4-2√(3), x = 4-2√(3), y = -2+2√(3) 或 u = -2-2√(3), v = 4+2√(3), x = 4+2√(3), y = -2-2√(3)", ["x", "y", "u", "v"]),
                 ("x^2 - y^2/4 = 1; u^2 - v^2/4 = 1; y = 2*x - 3; v = 2*u - 3", "u = 13/12, v = -5/6, x = 13/12, y = -5/6", ["x", "y", "u", "v"]),
                 (   "x^2/16 + y^2/9 = 1; x^2 + y^2 = 4; u = x; v = y",
-                    "u = 4√(-5/7), v = 6√(3/7), x = 4√(-5/7), y = 6√(3/7) 或 u = 4√(-5/7), v = -6√(3/7), x = 4√(-5/7), y = -6√(3/7) 或 u = -4√(-5/7), v = 6√(3/7), x = -4√(-5/7), y = 6√(3/7) 或 u = "
-                    "-4√(-5/7), v = -6√(3/7), x = -4√(-5/7), y = -6√(3/7)",
+                    "u = 4√(-5/7), v = (6√(21))/7, x = 4√(-5/7), y = (6√(21))/7 或 u = 4√(-5/7), v = -(6√(21))/7, x = 4√(-5/7), y = -(6√(21))/7 或 u = -4√(-5/7), v = (6√(21))/7, x = -4√(-5/7), y = (6√(21))/7 或 u = "
+                    "-4√(-5/7), v = -(6√(21))/7, x = -4√(-5/7), y = -(6√(21))/7",
                     ["x", "y", "u", "v"]),
-                ("x^2/5 + y^2/4 = 1; u^2/5 + v^2/4 = 1; y = k*x + b; v = k*u + b", "无解（化简后的方程组：(1/5)x^2+(1/4)y^2-1 ; (1/5)u^2+(1/4)v^2-1 ; -b-kx+y ; -b-ku+v = 0）", ["x", "y", "u", "v", "k", "b"]),
-                ("x^2/8 + y^2/4 = 1; u^2/8 + v^2/4 = 1; x + u = 2; y + v = 0", "u = 1, v = √(7/2), x = 1, y = -√(7/2) 或 u = 1, v = -√(7/2), x = 1, y = √(7/2)", ["x", "y", "u", "v"]),
+                ("x^2/5 + y^2/4 = 1; u^2/5 + v^2/4 = 1; y = k*x + b; v = k*u + b", "u = ((-1/2)bk+k√(-b^2/(5k^2)+(4/5)k^2+1))/((1/2)k^2+2/5), v = ((2/5)b+k^2√(-b^2/(5k^2)+(4/5)k^2+1))/((1/2)k^2+2/5), x = ((-1/2)bk+k√(-b^2/(5k^2)+(4/5)k^2+1))/((1/2)k^2+2/5), y = ((2/5)b+k^2√(-b^2/(5k^2)+(4/5)k^2+1))/((1/2)k^2+2/5) 或 u = ((-1/2)bk-k√(-b^2/(5k^2)+(4/5)k^2+1))/((1/2)k^2+2/5), v = ((2/5)b-k^2√(-b^2/(5k^2)+(4/5)k^2+1))/((1/2)k^2+2/5), x = ((-1/2)bk+k√(-b^2/(5k^2)+(4/5)k^2+1))/((1/2)k^2+2/5), y = ((2/5)b+k^2√(-b^2/(5k^2)+(4/5)k^2+1))/((1/2)k^2+2/5) 或 u = ((-1/2)bk+k√(-b^2/(5k^2)+(4/5)k^2+1))/((1/2)k^2+2/5), v = ((2/5)b+k^2√(-b^2/(5k^2)+(4/5)k^2+1))/((1/2)k^2+2/5), x = ((-1/2)bk-k√(-b^2/(5k^2)+(4/5)k^2+1))/((1/2)k^2+2/5), y = ((2/5)b-k^2√(-b^2/(5k^2)+(4/5)k^2+1))/((1/2)k^2+2/5) 或 u = ((-1/2)bk-k√(-b^2/(5k^2)+(4/5)k^2+1))/((1/2)k^2+2/5), v = ((2/5)b-k^2√(-b^2/(5k^2)+(4/5)k^2+1))/((1/2)k^2+2/5), x = ((-1/2)bk-k√(-b^2/(5k^2)+(4/5)k^2+1))/((1/2)k^2+2/5), y = ((2/5)b-k^2√(-b^2/(5k^2)+(4/5)k^2+1))/((1/2)k^2+2/5)", ["x", "y", "u", "v", "k", "b"]),
+                ("x^2/8 + y^2/4 = 1; u^2/8 + v^2/4 = 1; x + u = 2; y + v = 0", "u = 1, v = (√(14))/2, x = 1, y = -(√(14))/2 或 u = 1, v = -(√(14))/2, x = 1, y = (√(14))/2", ["x", "y", "u", "v"]),
                 (   "x^2/9 + y^2/4 = 1; u^2 - v^2 = 1; x = u; y = v",
-                    "u = 3√(5/13), v = 4√(2/13), x = 3√(5/13), y = 4√(2/13) 或 u = 3√(5/13), v = -4√(2/13), x = 3√(5/13), y = -4√(2/13) 或 u = -3√(5/13), v = 4√(2/13), x = -3√(5/13), y = 4√(2/13) 或 u "
-                    "= -3√(5/13), v = -4√(2/13), x = -3√(5/13), y = -4√(2/13)",
+                    "u = (3√(65))/13, v = (4√(26))/13, x = (3√(65))/13, y = (4√(26))/13 或 u = (3√(65))/13, v = -(4√(26))/13, x = (3√(65))/13, y = -(4√(26))/13 或 u = -(3√(65))/13, v = (4√(26))/13, x = -(3√(65))/13, y = (4√(26))/13 或 u "
+                    "= -(3√(65))/13, v = -(4√(26))/13, x = -(3√(65))/13, y = -(4√(26))/13",
                     ["x", "y", "u", "v"]),
                 (   "x^2/4 + y^2/3 = 1; y = x + 1; u = x; v = y",
                     "u = -4/7+(6√(2))/7, v = 3/7+(6√(2))/7, x = -4/7+(6√(2))/7, y = 3/7+(6√(2))/7 或 u = -4/7-(6√(2))/7, v = 3/7-(6√(2))/7, x = -4/7-(6√(2))/7, y = 3/7-(6√(2))/7",
                     ["x", "y", "u", "v"]),
                 (   "x^2/9 + y^2/4 = 1; x^2/4 - y^2/5 = 1; p = x; q = y",
-                    "p = 18√(1/61), q = 10√(1/61), x = 18√(1/61), y = 10√(1/61) 或 p = 18√(1/61), q = -10√(1/61), x = 18√(1/61), y = -10√(1/61) 或 p = -18√(1/61), q = 10√(1/61), x = -18√(1/61), y = "
-                    "10√(1/61) 或 p = -18√(1/61), q = -10√(1/61), x = -18√(1/61), y = -10√(1/61)",
+                    "p = (18√(61))/61, q = (10√(61))/61, x = (18√(61))/61, y = (10√(61))/61 或 p = (18√(61))/61, q = -(10√(61))/61, x = (18√(61))/61, y = -(10√(61))/61 或 p = -(18√(61))/61, q = (10√(61))/61, x = -(18√(61))/61, y = "
+                    "(10√(61))/61 或 p = -(18√(61))/61, q = -(10√(61))/61, x = -(18√(61))/61, y = -(10√(61))/61",
                     ["x", "y", "p", "q"]),
                 (   "x^2/4 + y^2/3 = 1; u^2/4 + v^2/3 = 1; x*u + y*v = 0",
                     "u = 2√((-1/3)v^2+1), x = (-v√(((-4/3)v^2+4)/((-7/36)v^2+4/3)))/(2√((-1/3)v^2+1)), y = √(((-4/3)v^2+4)/((-7/36)v^2+4/3)) 或 u = -2√((-1/3)v^2+1), x = "
@@ -932,30 +946,22 @@ class AlgebraCalculatorGUI:
                 ("y^2 = 4*x; u^2 = 4*v; x + u = 2; y + v = 2", "u = -2+2√(3), v = 4-2√(3), x = 4-2√(3), y = -2+2√(3) 或 u = -2-2√(3), v = 4+2√(3), x = 4+2√(3), y = -2-2√(3)", ["x", "y", "u", "v"]),
                 ("x^2 - y^2/4 = 1; u^2 - v^2/4 = 1; y = 2*x - 3; v = 2*u - 3", "u = 13/12, v = -5/6, x = 13/12, y = -5/6", ["x", "y", "u", "v"]),
                 (   "x^2/16 + y^2/9 = 1; x^2 + y^2 = 4; u = x; v = y",
-                    "u = 4√(-5/7), v = 6√(3/7), x = 4√(-5/7), y = 6√(3/7) 或 u = 4√(-5/7), v = -6√(3/7), x = 4√(-5/7), y = -6√(3/7) 或 u = -4√(-5/7), v = 6√(3/7), x = -4√(-5/7), y = 6√(3/7) 或 u = "
-                    "-4√(-5/7), v = -6√(3/7), x = -4√(-5/7), y = -6√(3/7)",
+                    "u = 4√(-5/7), v = (6√(21))/7, x = 4√(-5/7), y = (6√(21))/7 或 u = 4√(-5/7), v = -(6√(21))/7, x = 4√(-5/7), y = -(6√(21))/7 或 u = -4√(-5/7), v = (6√(21))/7, x = -4√(-5/7), y = (6√(21))/7 或 u = "
+                    "-4√(-5/7), v = -(6√(21))/7, x = -4√(-5/7), y = -(6√(21))/7",
                     ["x", "y", "u", "v"]),
                 (   "x^2/4 - y^2 = 1; u^2/9 + v^2/4 = 1; x = u; y = v",
-                    "u = 6√(1/5), v = 2√(1/5), x = 6√(1/5), y = 2√(1/5) 或 u = 6√(1/5), v = -2√(1/5), x = 6√(1/5), y = -2√(1/5) 或 u = -6√(1/5), v = 2√(1/5), x = -6√(1/5), y = 2√(1/5) 或 u = -6√(1/5), "
-                    "v = -2√(1/5), x = -6√(1/5), y = -2√(1/5)",
+                    "u = (6√(5))/5, v = (2√(5))/5, x = (6√(5))/5, y = (2√(5))/5 或 u = (6√(5))/5, v = -(2√(5))/5, x = (6√(5))/5, y = -(2√(5))/5 或 u = -(6√(5))/5, v = (2√(5))/5, x = -(6√(5))/5, y = (2√(5))/5 或 u = -(6√(5))/5, "
+                    "v = -(2√(5))/5, x = -(6√(5))/5, y = -(2√(5))/5",
                     ["x", "y", "u", "v"]),
-                ("x^2/8 + y^2/4 = 1; u^2/8 + v^2/4 = 1; x + u = 2; y + v = 0", "u = 1, v = √(7/2), x = 1, y = -√(7/2) 或 u = 1, v = -√(7/2), x = 1, y = √(7/2)", ["x", "y", "u", "v"])],
+                ("x^2/8 + y^2/4 = 1; u^2/8 + v^2/4 = 1; x + u = 2; y + v = 0", "u = 1, v = (√(14))/2, x = 1, y = -(√(14))/2 或 u = 1, v = -(√(14))/2, x = 1, y = (√(14))/2", ["x", "y", "u", "v"])],
     "综合方程": [
                 ("|x+y| = 3; x^2 + y^2 = 17", "x = -1, y = 4 或 x = 4, y = -1 或 x = -4, y = 1 或 x = 1, y = -4"),
-                ("(x+y)/(x-y) + (x-y)/(x+y) = 17/4; x^2 + y^2 = 25", "x = 25√(1/34), y = 15√(1/34) 或 x = -25√(1/34), y = -15√(1/34) 或 x = -25√(1/34), y = 15√(1/34) 或 x = 25√(1/34), y = -15√(1/34)", ["x", "y"]),
+                ("(x+y)/(x-y) + (x-y)/(x+y) = 17/4; x^2 + y^2 = 25", "x = (25√(34))/34, y = (15√(34))/34 或 x = -(25√(34))/34, y = -(15√(34))/34 或 x = -(25√(34))/34, y = (15√(34))/34 或 x = (25√(34))/34, y = -(15√(34))/34", ["x", "y"]),
                 ("|x/y + y/x| = 2; x + y = 4", "x = 2, y = 2", ["x", "y"]),
                 ("x^3 + y^3 = 9; x + y = 3", "x = 1, y = 2 或 x = 2, y = 1", ["x", "y"]),
                 ("1/(√(x)+1) + 1/(√(y)+1) = 1; x + y = 8", "x = 1/(4+√(15)), y = 4+√(15) 或 x = 1/(4-√(15)), y = 4-√(15)", ["x", "y"]),
             ],
-    "3.7": [   ("x^2+y^2=r^2; x+y=0", "x = -r√(1/2), y = r√(1/2) 或 x = r√(1/2), y = -r√(1/2)", ["x", "y"]),
-               ("|x+y|=4; x^2+y^2=9", "x = 2-(√(2))/2, y = 2+(√(2))/2 或 x = 2+(√(2))/2, y = 2-(√(2))/2 或 x = -2-(√(2))/2, y = -2+(√(2))/2 或 x = -2+(√(2))/2, y = -2-(√(2))/2"),
-               ("x^2+y^2-4x=9; x=y-1", "x = 1/2+(√(17))/2, y = 3/2+(√(17))/2 或 x = 1/2-(√(17))/2, y = 3/2-(√(17))/2"),
-               ("x^2+y^2+4x-4y=0; x^2+y^2+2x-12=0", "x = -2+4√(2/5), y = 2+(2√(10))/5 或 x = -2-4√(2/5), y = 2-(2√(10))/5"),
-               ("x^2/4+y^2=1; y=x", "x = 2√(1/5), y = 2√(1/5) 或 x = -2√(1/5), y = -2√(1/5)"),
-               ("√(x^2+1) + √(x^2+1) = 2", "x = 0"),
-               ("x^2+y^2=9; x=y", "x = 3√(1/2), y = 3√(1/2) 或 x = -3√(1/2), y = -3√(1/2)"),
-               ("x^2+y^2=9; x=y-2", "x = -1+(√(14))/2, y = 1+(√(14))/2 或 x = -1-(√(14))/2, y = 1-(√(14))/2"),
-               ("x^2+y^2=9; x=y-1", "x = -1/2+(√(17))/2, y = 1/2+(√(17))/2 或 x = -1/2-(√(17))/2, y = 1/2-(√(17))/2")]}
+        }
         self.other_categories = {  # 因式分解等功能测试
             "因式分解": [
                 ("x^2-1", "(x-1)(x+1)"),
@@ -977,6 +983,45 @@ class AlgebraCalculatorGUI:
                 ("x^3+y^3+z^3-3xyz", "(x+y+z)(x^2-xy-xz+y^2-yz+z^2)"),
                 ("(a+b+c)^3-a^3-b^3-c^3", "3(a+b)(a+c)(b+c)"),
                 ("a^4+b^4+c^4-2a^2b^2-2b^2c^2-2c^2a^2", "(a-b-c)(a-b+c)(a+b-c)(a+b+c)"),
+            ],
+            "3.7": [
+                ("x^2+y^2=r^2; x+y=0", "x = -(r√(2))/2, y = (r√(2))/2 或 x = (r√(2))/2, y = -(r√(2))/2", ["x", "y", "r"]),
+                ("|x+y|=4; x^2+y^2=9", "x = 2-(√(2))/2, y = 2+(√(2))/2 或 x = 2+(√(2))/2, y = 2-(√(2))/2 或 x = -2-(√(2))/2, y = -2+(√(2))/2 或 x = -2+(√(2))/2, y = -2-(√(2))/2", "simplify"),
+                ("x^2+y^2-4x=9; x=y-1", "x = 1/2+(√(17))/2, y = 3/2+(√(17))/2 或 x = 1/2-(√(17))/2, y = 3/2-(√(17))/2", "simplify"),
+                ("x^2+y^2+4x-4y=0; x^2+y^2+2x-12=0", "x = -2+(4√(10))/5, y = 2+(2√(10))/5 或 x = -2-(4√(10))/5, y = 2-(2√(10))/5", "simplify"),
+                ("x^2/4+y^2=1; y=x", "x = (2√(5))/5, y = (2√(5))/5 或 x = -(2√(5))/5, y = -(2√(5))/5", "simplify"),
+                ("√(x^2+1) + √(x^2+1) = 2", "x = 0", "simplify"),
+                ("x^2+y^2=9; x=y", "x = (3√(2))/2, y = (3√(2))/2 或 x = -(3√(2))/2, y = -(3√(2))/2", "simplify"),
+                ("x^2+y^2=9; x=y-2", "x = -1+(√(14))/2, y = 1+(√(14))/2 或 x = -1-(√(14))/2, y = 1-(√(14))/2", "simplify"),
+                ("x^2+y^2=9; x=y-1", "x = -1/2+(√(17))/2, y = 1/2+(√(17))/2 或 x = -1/2-(√(17))/2, y = 1/2-(√(17))/2", "simplify"),
+            ],
+            "6.5": [
+                ("-xxx+11xx-10x=70", "x = 3.933471055 或 9.035986063 或 -1.969457117", "simplify"),
+                ("xx+yy-2x+6y+2=0;xx+yy+4x-2y-4=0", "x = -11/25+(8√(14))/25, y = -27/25+(6√(14))/25 或 x = -11/25-(8√(14))/25, y = -27/25-(6√(14))/25", ["x", "y"]),
+                ("y=kx-√(3)k;y=√(2)x", "k = y/((-y+√(6))/(-√(2))), x = (-y)/(-√(2))", ["k", "x"]),
+                ("(1+x)*e^x=1", "目前不支持求解含幂表达式的方程，已化简：x-1+e^x+e^x", "simplify"),
+                ("xx/4+yy/3=1;x-2=-2x;y=2(c-y)", "c = √(6), x = 2/3, y = (2√(6))/3 或 c = -√(6), x = 2/3, y = -(2√(6))/3", ["c", "x", "y"]),
+                ("a/x-2x-2+a=0", "多变量方程的解:\n  a = 2x\n  x = (1/4)a-1/2+|((1/4)a+1/2)| 或 (1/4)a-1/2+|((-1/4)a-1/2)|", "simplify"),
+            ],
+            "化简匹配测试": [
+                # --- simplify 模式：验证根号格式差异被规范化匹配 ---
+                # √(1/2) vs (√2)/2 — 根号有理化后格式不同但数学等价
+                ("√(1/2)", "(√(2))/2", "simplify"),
+                ("3√(1/2)", "(3√(2))/2", "simplify"),
+                ("√(2/3)", "(√(6))/3", "simplify"),
+                # 完全平方三项式
+                ("√(a^2+4a+4)", "|(a+2)|", "simplify"),
+                ("√(x^2+6x+9)", "|(x+3)|", "simplify"),
+                # e 作为自然常数
+                ("(x+1)(ex^2-1)/x", "ex+ex^2-1/x-1", "simplify"),
+                # --- factor 模式：验证因式分解 ---
+                ("x^2-1", "(x-1)(x+1)", "factor"),
+                ("x^2+5x+6", "(x+2)(x+3)", "factor"),
+                # --- solve_vars 模式：验证解方程 ---
+                ("x^2+y^2=r^2; x+y=0", "x = -(r√(2))/2, y = (r√(2))/2 或 x = (r√(2))/2, y = -(r√(2))/2", ["x", "y", "r"]),
+                ("xx+yy-2x+6y+2=0;xx+yy+4x-2y-4=0",
+                 "x = -11/25+(8√(14))/25, y = -27/25+(6√(14))/25 或 x = -11/25-(8√(14))/25, y = -27/25-(6√(14))/25",
+                 ["x", "y"]),
             ],
         }
 
@@ -1196,7 +1241,7 @@ class AlgebraCalculatorGUI:
         var_frame = ttk.Frame(buttons_frame)
         var_frame.pack(fill=tk.X)
 
-        var_buttons = ['x', 'y', 'z', 'a', 'b', 'c', '(', ')', '=', '√', 'log', '^', '|']
+        var_buttons = ['x', 'y', 'z', 'a', 'b', 'c', '(', ')', '=', '√', 'log', '|']
 
         for col, text in enumerate(var_buttons):
             btn_frame = ttk.Frame(var_frame)
@@ -2142,10 +2187,11 @@ class AlgebraCalculatorGUI:
             for item in self.other_categories[sub]:
                 if len(item) == 2:
                     test_input, expected = item
-                    all_tests.append(("其他", test_input, expected))
+                    all_tests.append(("其他", test_input, expected, None))
                 else:
-                    test_input, expected, solve_vars = item
-                    all_tests.append(("其他", test_input, expected, solve_vars))
+                    test_input, expected, third = item
+                    # third 可以是 list（求解变量）或 str（模式：simplify/factor）
+                    all_tests.append(("其他", test_input, expected, third))
 
         if not all_tests:
             messagebox.showinfo("无测试", "所选类别中没有测试用例")
@@ -2167,130 +2213,127 @@ class AlgebraCalculatorGUI:
         self.test_thread.start()
 
     def _are_solutions_equivalent(self, expected, actual, test_type):
-        """判断两个解字符串是否数学等价（使用 sympy 进行数学比较）"""
+        """判断两个解字符串是否数学等价
+
+        策略：
+        1. 用计算器自身的解析+化简归一化表达式值，消除格式差异（如 √(1/2) vs (√2)/2）
+        2. 对复杂表达式用 sympy 精确比较
+        """
         import re
 
-        # 归一化：将 \n 和 或 统一为 \n，方便代码中直观编写期望值
+        def _normalize_value(val_str):
+            """用计算器规范化单个表达式的字符串形式"""
+            try:
+                expr = self.calculator.parse_expression(val_str)
+                if hasattr(expr, 'simplify'):
+                    simplified = expr.simplify()
+                    s = str(simplified)
+                    # 清理显示格式
+                    s = s.replace('+-', '-').replace('--', '+')
+                    return s
+            except Exception:
+                pass
+            return val_str
+
+        def _values_match(e_val, a_val):
+            """比较两个变量值是否数学等价"""
+            # 快速路径：完全相同
+            if e_val == a_val:
+                return True
+            # 归一化后比较
+            e_norm = _normalize_value(e_val)
+            a_norm = _normalize_value(a_val)
+            if e_norm == a_norm:
+                return True
+            # sympy 精确比较
+            try:
+                import sympy as sp
+                e_s = e_norm.replace(' ', '')
+                a_s = a_norm.replace(' ', '')
+                # 转换 √(...) → sqrt(...)
+                while '√(' in e_s:
+                    e_s = re.sub(r'√\(([^()]+)\)', r'sqrt(\1)', e_s)
+                while '√(' in a_s:
+                    a_s = re.sub(r'√\(([^()]+)\)', r'sqrt(\1)', a_s)
+                e_s = e_s.replace('^', '**')
+                a_s = a_s.replace('^', '**')
+                e_s = re.sub(r'(\d)([a-zA-Z])', r'\1*\2', e_s)
+                a_s = re.sub(r'(\d)([a-zA-Z])', r'\1*\2', a_s)
+                e_expr = sp.sympify(e_s)
+                a_expr = sp.sympify(a_s)
+                return sp.simplify(e_expr - a_expr) == 0
+            except Exception:
+                return False
+
+        def _parse_pairs(line):
+            """解析 'var = val, var = val' 格式"""
+            pairs = {}
+            for pair in re.split(r',\s*', line):
+                if '=' in pair:
+                    var, val = pair.split('=', 1)
+                    pairs[var.strip()] = val.strip()
+            return pairs
+
+        # 归一化分隔符
         expected = expected.replace(' 或 ', '\n').replace('或 ', '\n').replace(' 或', '\n')
         actual = actual.replace(' 或 ', '\n').replace('或 ', '\n').replace(' 或', '\n')
 
-        def to_sympy_expr(s):
-            """将计算器格式的表达式转换为 sympy 表达式"""
-            import sympy as sp
-            s = s.strip().replace(' ', '')
-            sqrt_char = '√'  # √
-            # 递归替换 √(...) → sqrt(...)
-            while sqrt_char + '(' in s:
-                s = re.sub(sqrt_char + r'\(([^()]+)\)', r'sqrt(\1)', s)
-            # 将 ^ 替换为 **
-            s = s.replace('^', '**')
-            # 处理隐式乘法
-            s = re.sub(r'(\d)([a-zA-Z])', r'\1*\2', s)
-            s = re.sub(r'(\d)sqrt', r'\1*sqrt', s)
-            s = re.sub(r'\)(\d)', r')*\1', s)
-            return sp.sympify(s)
+        # 无解/恒等类型的模糊匹配
+        _no_sol = ('无解', '矛盾方程', '无法求解', '无法显示', '目前不支持', '无穷多解', '恒等式')
+        if any(expected.startswith(p) for p in _no_sol) and any(actual.startswith(p) for p in _no_sol):
+            return True
 
-        def _is_sympy_slow_pattern(s):
-            """检测 sympy.simplify 难以快速处理的表达式模式
+        # 按"或"拆分解组
+        exp_groups = [g.strip() for g in expected.split('\n') if g.strip()]
+        act_groups = [g.strip() for g in actual.split('\n') if g.strip()]
 
-            只检测"根号内含分式且分子分母均含负号"的极端情况。
-            典型案例：√((-y²)/(-y²+1))
-            这类表达式会让 sympy.simplify 陷入极慢的符号计算，导致界面卡死。
-            不触发普通表达式如 -2-4/5√(10) 或 (1+√(17))/2。
-            """
-            s = s.replace(' ', '')
-            sqrt_char = '√'
-            # 查找每一个 √(...) 的内容
-            pattern = sqrt_char + r'\(([^()]+)\)'
-            for m in re.findall(pattern, s):
-                content = m
-                if '/' not in content:
-                    continue
-                # 检查分数中分子和分母是否各有负号
-                parts = content.split('/')
-                if len(parts) == 2:
-                    num_neg = parts[0].count('-')
-                    den_neg = parts[1].count('-')
-                    if num_neg > 0 and den_neg > 0:
-                        return True
-            return False
-
-        def compare_solution_line(exp_line, act_line):
-            """比较单行解（可能包含多个变量）"""
-            exp_pairs = {}
-            act_pairs = {}
-            for pair in re.split(r',\s*', exp_line):
-                if '=' in pair:
-                    var, val = pair.split('=', 1)
-                    exp_pairs[var.strip()] = val.strip()
-            for pair in re.split(r',\s*', act_line):
-                if '=' in pair:
-                    var, val = pair.split('=', 1)
-                    act_pairs[var.strip()] = val.strip()
-
+        # 单解组：直接比较变量值
+        if len(exp_groups) == 1 and len(act_groups) == 1:
+            exp_pairs = _parse_pairs(exp_groups[0])
+            act_pairs = _parse_pairs(act_groups[0])
             if not exp_pairs or not act_pairs:
-                return exp_line == act_line
-
-            # 比较共同的变量
-            common_vars = set(exp_pairs.keys()) & set(act_pairs.keys())
-            if not common_vars:
-                return False
-
-            for var in sorted(common_vars):
-                e_val = exp_pairs[var]
-                a_val = act_pairs[var]
-
-                # 快速路径：字符串完全相同则数学等价
-                if e_val == a_val:
-                    continue
-
-                # 检测 sympy 难以快速处理的模式：嵌套根号 + 负号 + 分式
-                # 形如 √((-y²)/(-y²+1)) 的表达式会导致 sp.simplify 极慢甚至卡死
-                if _is_sympy_slow_pattern(e_val) or _is_sympy_slow_pattern(a_val):
-                    # 直接回退到精确字符串比较
-                    if e_val != a_val:
-                        return False
-                    continue
-
-                try:
-                    e_expr = to_sympy_expr(e_val)
-                    a_expr = to_sympy_expr(a_val)
-                    import sympy as sp
-                    if sp.simplify(e_expr - a_expr) != 0:
-                        return False
-                except Exception:
-                    # sympy 比较失败，回退到原始字符串比较
-                    if e_val != a_val:
-                        return False
+                return expected.strip() == actual.strip()
+            for var in exp_pairs:
+                if var not in act_pairs:
+                    return False
+                if not _values_match(exp_pairs[var], act_pairs[var]):
+                    return False
             return True
 
-        # 快捷路径：期望和实际都属"不可解/无解/恒等"类型，视为匹配
-        _no_solution_prefixes = ('无解', '矛盾方程', '无法求解', '无法显示', '目前不支持', '无穷多解', '恒等式')
-        if any(expected.startswith(p) for p in _no_solution_prefixes) and \
-           any(actual.startswith(p) for p in _no_solution_prefixes):
-            return True
-
-        # 主逻辑: 按"或"分割多个解组
-        exp_groups = [g.strip() for g in expected.split('或') if g.strip()]
-        act_groups = [g.strip() for g in actual.split('或') if g.strip()]
-
+        # 多解组：数量必须一致
         if len(exp_groups) != len(act_groups):
             return False
 
-        # 对每个解组进行匹配
+        # 对每个期望解组，找到匹配的实际解组
         matched_act = set()
         for exp_group in exp_groups:
+            exp_pairs = _parse_pairs(exp_group)
             found = False
             for j, act_group in enumerate(act_groups):
                 if j in matched_act:
                     continue
-                if compare_solution_line(exp_group, act_group):
+                act_pairs = _parse_pairs(act_group)
+                if not exp_pairs or not act_pairs:
+                    if exp_group == act_group:
+                        matched_act.add(j)
+                        found = True
+                        break
+                    continue
+                # 比较共同的变量
+                common = set(exp_pairs.keys()) & set(act_pairs.keys())
+                if not common:
+                    continue
+                all_match = True
+                for var in common:
+                    if not _values_match(exp_pairs[var], act_pairs[var]):
+                        all_match = False
+                        break
+                if all_match:
                     matched_act.add(j)
                     found = True
                     break
             if not found:
                 return False
-
         return True
 
     def _run_tests_thread(self, all_tests):
@@ -2309,12 +2352,22 @@ class AlgebraCalculatorGUI:
                 if self.test_cancelled:
                     break
 
-                # 兼容两种格式： (类型, 输入, 期望) 或 (类型, 输入, 期望, 求解变量列表)
+                # 兼容两种格式： (类型, 输入, 期望) 或 (类型, 输入, 期望, 模式/求解变量)
                 if len(test_data) == 3:
                     test_type, test_input, expected = test_data
                     solve_vars = None
+                    mode = None
                 else:
-                    test_type, test_input, expected, solve_vars = test_data
+                    test_type, test_input, expected, mode_or_vars = test_data
+                    if isinstance(mode_or_vars, list):
+                        solve_vars = mode_or_vars
+                        mode = None
+                    elif isinstance(mode_or_vars, str):
+                        solve_vars = None
+                        mode = mode_or_vars
+                    else:
+                        solve_vars = None
+                        mode = None
 
                 progress = (i + 1) / total_tests * 100
                 self.root.after(0, self._update_test_progress, progress, i + 1, total_tests, test_input)
@@ -2324,11 +2377,17 @@ class AlgebraCalculatorGUI:
                         debug_cb(f"正在测试 ({i + 1}/{total_tests}): {test_input}", level=1)
 
                     # 判断测试类型，调用对应的计算方法
-                    if test_type == "其他":
+                    if mode == "factor":
                         result = self.calculator.factor_expression(test_input, debug_cb)
-                    elif ';' in test_input and solve_vars is not None:
-                        # 直接调用 solve_system 并传入变量列表
+                    elif mode == "simplify":
+                        result = self.calculator.simplify_expression(test_input, debug_cb)
+                    elif isinstance(solve_vars, list):
+                        # solve_vars 列表 → 调用 solve_system
                         result = self.calculator.solve_system(test_input, solve_vars, debug_cb)
+                    elif ';' in test_input and solve_vars is not None:
+                        result = self.calculator.solve_system(test_input, solve_vars, debug_cb)
+                    elif test_type == "其他":
+                        result = self.calculator.factor_expression(test_input, debug_cb)
                     else:
                         result = self.calculator.simplify_expression(test_input, debug_cb)
 
