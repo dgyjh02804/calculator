@@ -13,15 +13,22 @@ class AlgebraicTerm:
 
     def __mul__(self, other):
         if isinstance(other, (int, Fraction)):
-            return AlgebraicTerm(self.coeff * other, self.vars.copy())
+            new_coeff = self.coeff * other
+            if new_coeff.numerator == 0:
+                return AlgebraicTerm(Fraction(0, 1), {})  # 0 * term = 0 (no vars)
+            return AlgebraicTerm(new_coeff, self.vars.copy())
         elif isinstance(other, AlgebraicTerm):
             new_coeff = self.coeff * other.coeff
+            if new_coeff.numerator == 0:
+                return AlgebraicTerm(Fraction(0, 1), {})  # 0 * term = 0
             new_vars = self.vars.copy()
             for var, exp in other.vars.items():
                 new_vars[var] = new_vars.get(var, 0) + exp
             new_vars = {k: v for k, v in new_vars.items() if v != 0}
             return AlgebraicTerm(new_coeff, new_vars)
         elif isinstance(other, AbsoluteValue):
+            if self.coeff.numerator == 0:
+                return AlgebraicTerm(Fraction(0, 1), {})  # 0 * |x| = 0
             return AbsoluteValue(self * other.inner_expr)
         elif isinstance(other, SqrtExpression):
             TermWithSqrt = globals().get('TermWithSqrt')
@@ -223,9 +230,15 @@ class AlgebraicTerm:
         s = s.strip()
         if not s:
             return AlgebraicTerm(Fraction(0, 1))
+        # 验证输入只包含合法字符：数字、字母、^、-、/、.、+、*
+        import re as _re
+        if _re.search(r'[^a-zA-Z0-9\^\-/\.\+\*\s]', s):
+            raise ValueError(f"无法解析为代数项: '{s}' (包含非法字符)")
         sign = 1
         if s[0] == '-':
             sign = -1
+            s = s[1:]
+        elif s[0] == '+':
             s = s[1:]
         coeff_str = ""
         var_part = ""
@@ -241,7 +254,12 @@ class AlgebraicTerm:
         coeff = coeff * sign
         vars_dict = {}
         if var_part:
+            # 验证变量部分只包含字母、^和数字
+            if _re.search(r'[^a-zA-Z0-9\^]', var_part):
+                raise ValueError(f"无法解析变量部分: '{var_part}'")
             matches = re.findall(r'([a-zA-Z])(?:\^(\d+))?', var_part)
+            if not matches:
+                raise ValueError(f"无法解析变量部分: '{var_part}'")
             for var, exp_str in matches:
                 exp = int(exp_str) if exp_str else 1
                 vars_dict[var] = vars_dict.get(var, 0) + exp
@@ -310,7 +328,13 @@ class AbsoluteValue:
             return f"|{inner_str}|"
 
     def __mul__(self, other):
-        if isinstance(other, (int, Fraction, AlgebraicTerm, AlgebraicExpression, AbsoluteValue)):
+        if isinstance(other, AbsoluteValue):
+            # |a| * |b| = |a*b| (不嵌套)
+            inner = self.inner_expr * other.inner_expr
+            if inner is None:
+                inner = AlgebraicExpression([AlgebraicTerm(Fraction(0, 1))])
+            return AbsoluteValue(inner)
+        if isinstance(other, (int, Fraction, AlgebraicTerm, AlgebraicExpression)):
             inner = self.inner_expr * other
             if inner is None:
                 inner = AlgebraicExpression([AlgebraicTerm(Fraction(0, 1))])
@@ -1567,10 +1591,12 @@ class AlgebraicExpression:
             self.terms = [terms]
         elif isinstance(terms, (int, Fraction)):
             self.terms = [AlgebraicTerm(terms if isinstance(terms, Fraction) else Fraction(terms, 1))]
-        elif isinstance(terms, AbsoluteValue):
+        elif isinstance(terms, (AbsoluteValue, SqrtExpression, TermWithSqrt, FractionExpression, PowerTerm, LogExpression)):
             self.terms = [terms]
-        else:
+        elif isinstance(terms, list):
             self.terms = terms
+        else:
+            self.terms = [terms]  # 安全兜底：非列表类型统一包装
 
     def simplify(self, debug_callback=None):
         """化简代数表达式，合并同类项、处理零项等"""
@@ -1643,25 +1669,63 @@ class AlgebraicExpression:
                     merged_regular.append(term)
 
             # ========== 修改：合并绝对值项 ==========
-            # 统计相同内部表达式的绝对值出现次数
+            # 先检测可互消的绝对值对（inner_a + inner_b == 0）
+            cancelled = [False] * len(abs_terms)
+            for i in range(len(abs_terms)):
+                if cancelled[i]:
+                    continue
+                for j in range(i + 1, len(abs_terms)):
+                    if cancelled[j]:
+                        continue
+                    try:
+                        inner_i = abs_terms[i].inner_expr
+                        inner_j = abs_terms[j].inner_expr
+                        if hasattr(inner_i, 'simplify'):
+                            inner_i = inner_i.simplify()
+                        if hasattr(inner_j, 'simplify'):
+                            inner_j = inner_j.simplify()
+                        # 检查是否 inner_i + inner_j == 0
+                        sum_expr = inner_i + inner_j
+                        if hasattr(sum_expr, 'simplify'):
+                            sum_expr = sum_expr.simplify()
+                        if hasattr(sum_expr, 'is_zero') and sum_expr.is_zero():
+                            cancelled[i] = True
+                            cancelled[j] = True
+                            break  # i 已被取消，处理下一个
+                    except Exception:
+                        pass
+
+            # 统计剩余未取消的绝对值项（用规范化 key）
             abs_dict = {}
-            for term in abs_terms:
-                inner_key = str(term.inner_expr)
-                if inner_key in abs_dict:
-                    abs_dict[inner_key] = abs_dict[inner_key] + 1
+            abs_original = {}  # 保存规范化 key 对应的原始 inner_expr
+            for idx, term in enumerate(abs_terms):
+                if cancelled[idx]:
+                    continue
+                inner_str = str(term.inner_expr)
+                # 规范化内部表达式：|-x| → |x|
+                canonical = inner_str
+                if canonical.startswith('(-') and canonical.endswith(')'):
+                    inner_content = canonical[2:-1]
+                    if inner_content:
+                        canonical = inner_content
+                elif canonical.startswith('-'):
+                    inner_content = canonical[1:]
+                    if inner_content and not any(op in inner_content for op in '+-'):
+                        canonical = inner_content
+                if canonical in abs_dict:
+                    abs_dict[canonical] = abs_dict[canonical] + 1
                 else:
-                    abs_dict[inner_key] = 1
+                    abs_dict[canonical] = 1
+                # 保存原始 inner_expr 引用（使用规范化后的 key）
+                if canonical not in abs_original:
+                    abs_original[canonical] = term.inner_expr
 
             merged_abs = []
             for inner_key, count in abs_dict.items():
                 if count == 0:
                     continue
-                # 获取内部表达式对象
-                inner_expr = None
-                for term in abs_terms:
-                    if str(term.inner_expr) == inner_key:
-                        inner_expr = term.inner_expr
-                        break
+                # 获取内部表达式对象（优先使用保存的原始引用）
+                inner_expr = abs_original.get(inner_key, None)
                 if inner_expr is None:
                     continue
                 if count == 1:
@@ -1859,8 +1923,25 @@ class AlgebraicExpression:
             other = AlgebraicExpression([other])
         elif not isinstance(other, AlgebraicExpression):
             return NotImplemented
+
+        # 预处理：检测并抵消相同的绝对值项（|x| - |x| = 0）
+        remaining_self_terms = list(self.terms)
+        other_abs_to_negate = []
+        for other_term in other.terms:
+            if isinstance(other_term, AbsoluteValue):
+                other_inner_str = str(other_term.inner_expr)
+                found = False
+                for i, self_term in enumerate(remaining_self_terms):
+                    if isinstance(self_term, AbsoluteValue) and str(self_term.inner_expr) == other_inner_str:
+                        remaining_self_terms.pop(i)
+                        found = True
+                        break
+                if found:
+                    continue  # 抵消，不添加到结果
+            other_abs_to_negate.append(other_term)
+
         neg_terms = []
-        for term in other.terms:
+        for term in other_abs_to_negate:
             if isinstance(term, AbsoluteValue):
                 neg_term = term * Fraction(-1, 1)
                 if neg_term is None:
@@ -1877,7 +1958,7 @@ class AlgebraicExpression:
                     if neg is None:
                         neg = AlgebraicTerm(Fraction(0, 1))
                     neg_terms.append(neg)
-        new_terms = self.terms + neg_terms
+        new_terms = remaining_self_terms + neg_terms
         if new_terms is None:
             new_terms = []
         result = AlgebraicExpression(new_terms)
@@ -1964,7 +2045,7 @@ class AlgebraicExpression:
                     new_terms.append(term / other)
             return AlgebraicExpression(new_terms)
         elif isinstance(other, AlgebraicExpression):
-            if len(other.terms) == 1 and isinstance(other.terms[0], AlgebraicTerm) and other.terms[0].is_constant():
+            if len(other.terms) == 1 and isinstance(other.terms[0], AlgebraicTerm) and len(other.terms[0].vars) == 0:
                 const = other.terms[0].coeff
                 return self / const
             else:
@@ -2310,6 +2391,21 @@ class FractionExpression:
             else:
                 simplified_den = self.denominator
 
+            # 处理嵌套分式: a / (b/c) = a*c / b
+            if isinstance(simplified_den, FractionExpression):
+                if debug_callback:
+                    debug_callback(f"分母为嵌套分式，化简: {self.numerator} / ({simplified_den.numerator}/{simplified_den.denominator})", level=2)
+                new_num = simplified_num * simplified_den.denominator
+                new_den = simplified_den.numerator
+                return FractionExpression(new_num, new_den).simplify(debug_callback)
+            # 处理嵌套分式分子: (a/b) / c = a / (b*c)
+            if isinstance(simplified_num, FractionExpression):
+                if debug_callback:
+                    debug_callback(f"分子为嵌套分式，化简: ({simplified_num.numerator}/{simplified_num.denominator}) / {self.denominator}", level=2)
+                new_num = simplified_num.numerator
+                new_den = simplified_num.denominator * simplified_den
+                return FractionExpression(new_num, new_den).simplify(debug_callback)
+
             def has_neg_exp(expr):
                 if isinstance(expr, AlgebraicExpression):
                     for term in expr.terms:
@@ -2457,15 +2553,22 @@ class FractionExpression:
                                     all_terms_divisible = False
                                     break
                             if all_terms_divisible and quotient_terms:
-                                result_expr = AlgebraicExpression(quotient_terms)
-                                simplified_result = result_expr.simplify(debug_callback)
-                                if debug_callback:
-                                    debug_callback(f"分子能被分母整除，结果为: {simplified_result}", level=2)
-                                if simplified_result is None:
+                                # 检查展开后是否产生负指数（如 (x+y)/xy → 1/x+1/y 不应展开）
+                                creates_negative = False
+                                for q in quotient_terms:
+                                    if isinstance(q, AlgebraicTerm) and q.has_negative_exponents():
+                                        creates_negative = True
+                                        break
+                                if not creates_negative:
+                                    result_expr = AlgebraicExpression(quotient_terms)
+                                    simplified_result = result_expr.simplify(debug_callback)
                                     if debug_callback:
-                                        debug_callback("警告：FractionExpression.simplify 返回 None，使用零表达式", level=1)
-                                    return AlgebraicExpression([AlgebraicTerm(Fraction(0, 1))])
-                                return simplified_result
+                                        debug_callback(f"分子能被分母整除，结果为: {simplified_result}", level=2)
+                                    if simplified_result is None:
+                                        if debug_callback:
+                                            debug_callback("警告：FractionExpression.simplify 返回 None，使用零表达式", level=1)
+                                        return AlgebraicExpression([AlgebraicTerm(Fraction(0, 1))])
+                                    return simplified_result
             except Exception as e:
                 if debug_callback:
                     debug_callback(f"尝试约分时出错: {str(e)}", level=3)

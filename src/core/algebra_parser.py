@@ -29,7 +29,7 @@ class AlgebraicParser:
             if debug_callback:
                 debug_callback(f"将 {full_match} 转换为 √({inner_expr})", level=3)
             processed_expr = processed_expr.replace(full_match, f'√({inner_expr})', 1)
-        no_paren_pattern = r'([a-zA-Z0-9*\^]+)\^\(?1/2\)?'
+        no_paren_pattern = r'([a-zA-Z0-9\^]+)\^\(?1/2\)?'
         processed_expr = re.sub(no_paren_pattern, r'√(\1)', processed_expr)
         processed_expr = self._handle_absolute_value(processed_expr, debug_callback)
         processed_expr = self._handle_sqrt_function(processed_expr, debug_callback)
@@ -156,6 +156,14 @@ class AlgebraicParser:
                         result.append('*')
                     elif next_c == '√':
                         result.append('*')
+                    elif next_c == '(':
+                        # 隐式乘法：字母后跟括号，如 x(x+1)
+                        func_start = i
+                        while func_start > 0 and expr[func_start - 1].isalpha():
+                            func_start -= 1
+                        func_name = expr[func_start:i + 1]
+                        if func_name not in ['abs', 'sqrt', 'log']:
+                            result.append('*')
                 elif c.isdigit():
                     if next_c == '(' or (next_c.isalpha() and next_c.isascii()):
                         if i > 0 and expr[i - 1] == '/':
@@ -163,13 +171,6 @@ class AlgebraicParser:
                         else:
                             result.append('*')
                     elif next_c == '√':
-                        result.append('*')
-                elif c.isalpha() and c.isascii() and next_c == '(':
-                    func_start = i
-                    while func_start > 0 and expr[func_start - 1].isalpha():
-                        func_start -= 1
-                    func_name = expr[func_start:i + 1]
-                    if func_name not in ['abs', 'sqrt', 'log']:
                         result.append('*')
                 elif c == ')':
                     if next_c == '(' or next_c.isdigit() or (next_c.isalpha() and next_c.isascii()):
@@ -317,14 +318,20 @@ class AlgebraicParser:
                     elif is_after_sqrt or is_after_log:
                         result.append(f"({inner_expr})")
                     else:
-                        inner_processed = self._handle_parentheses(inner_expr, debug_callback)
-                        inner_result = self._parse_expr(inner_processed, debug_callback)
-                        inner_str = str(inner_result)
-                        # Keep parens if inner contains any operator that would change precedence
-                        if any(op in inner_str for op in '+-*/'):
-                            result.append(f"({inner_str})")
+                        # 括号前是字母或数字 → 隐式乘法，必须保留括号
+                        # 例: 2x(x+2) 去掉括号变成 2xx+2（错误!），应保留为 2x(x+2)
+                        is_implicit_mul = (i > 0 and (expr[i-1].isalpha() or expr[i-1].isdigit()))
+                        if is_implicit_mul:
+                            result.append(f"({inner_expr})")
                         else:
-                            result.append(inner_str)
+                            inner_processed = self._handle_parentheses(inner_expr, debug_callback)
+                            inner_result = self._parse_expr(inner_processed, debug_callback)
+                            inner_str = str(inner_result)
+                            has_implicit_mul = bool(re.search(r'\d[a-zA-Z]|[a-zA-Z]\d', inner_str))
+                            if any(op in inner_str for op in '+-*/') or has_implicit_mul:
+                                result.append(f"({inner_str})")
+                            else:
+                                result.append(inner_str)
                     i = j
             else:
                 result.append(expr[i])
@@ -375,8 +382,11 @@ class AlgebraicParser:
                         if sign == -1:
                             term_expr = term_expr * Fraction(-1, 1)
                         terms.extend(term_expr.terms)
-                    current = ''
-                    sign = -1
+                        current = ''
+                        sign = -1
+                    else:
+                        # current 为空 → 连续负号（如 --x），翻转符号
+                        sign = -sign
                 else:
                     current += char
             else:
@@ -460,7 +470,8 @@ class AlgebraicParser:
             if op == '*':
                 result = result * factor
             else:  # 除法
-                if factor.is_constant():
+                # 只有纯常数（无任何变量，包括数学常数如 e）才直接除以系数
+                if factor.is_constant() and len(factor.terms[0].vars) == 0:
                     const = factor.terms[0].coeff
                     result = result / const
                 else:

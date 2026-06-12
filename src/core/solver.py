@@ -991,7 +991,7 @@ class AlgebraicCalculator(AlgebraicParser):
             "方程中包含绝对值表达式" in sol_str or
             "Currently unsupported" in sol_str):
             raise UnsolvableEquationError(simplified)
-        if sol_str in ("无解", "矛盾方程（无解）"):
+        if sol_str.startswith("无解") or sol_str.startswith("矛盾方程"):
             return []
         if sol_str == "无穷多解":
             return [AlgebraicExpression([AlgebraicTerm(1, {var:1})])]
@@ -1050,6 +1050,28 @@ class AlgebraicCalculator(AlgebraicParser):
                 return [{var: AlgebraicExpression([AlgebraicTerm(Fraction(1, 1), {var: 1})])}]
             if self._is_abs_sqrt_identity(eq, debug_callback):
                 return [{var: AlgebraicExpression([AlgebraicTerm(Fraction(1, 1), {var: 1})])}]
+            # 处理含绝对值和根号的方程
+            if self.contains_abs(eq):
+                try:
+                    abs_sols = self._solve_abs_multivar(eq, [var], debug_callback)
+                    if abs_sols:
+                        result = []
+                        for conditions, sol_dict in abs_sols:
+                            if var in sol_dict:
+                                result.append({var: sol_dict[var]})
+                        return result
+                except Exception:
+                    pass
+            if self.contains_radical(eq):
+                try:
+                    rad_sols = self._solve_radical_equation(eq, var, debug_callback)
+                    result = []
+                    for sol in rad_sols:
+                        result.append({var: sol})
+                    if result:
+                        return result
+                except Exception:
+                    pass
             try:
                 sols = self._solve_one_equation(eq, var, debug_callback)
             except UnsolvableEquationError as e:
@@ -1277,10 +1299,10 @@ class AlgebraicCalculator(AlgebraicParser):
                     changed = True
         if debug_callback and iter_count >= max_iter:
             debug_callback(f"Warning: _substitute_solution reached max iterations for {sol_dict}", level=1)
-        # 移除不必要的简化，避免破坏分数系数
-        # for var, expr in sol.items():
-        #     if hasattr(expr, 'simplify'):
-        #         sol[var] = expr.simplify(debug_callback)
+        # 简化最终结果（分式表达式约分、常数计算等）
+        for var, expr in sol.items():
+            if hasattr(expr, 'simplify'):
+                sol[var] = expr.simplify(debug_callback)
         return sol
 
     def solve_system(self, equations_str, solve_vars=None, debug_callback=None):
@@ -1611,12 +1633,14 @@ class AlgebraicCalculator(AlgebraicParser):
 
         if seen is None:
             seen = set()
-        expr_str = str(expr)
-        if expr_str in seen:
+        # 使用 (类型名, 字符串) 作为 key，避免不同类型表达式 str 碰撞
+        # 例如 AlgebraicExpression([TermWithSqrt(1, Sqrt(x))]) 和 SqrtExpression(x) 都是 "√(x)"
+        expr_key = (type(expr).__name__, str(expr))
+        if expr_key in seen:
             if debug_callback:
                 debug_callback(f"检测到重复表达式，停止递归", level=2)
             return []
-        seen.add(expr_str)
+        seen.add(expr_key)
 
         # 处理分式表达式：取分子
         if isinstance(expr, FractionExpression):
@@ -1654,6 +1678,17 @@ class AlgebraicCalculator(AlgebraicParser):
         # 无根号则常规求解
         if not self.contains_radical(expr):
             return self._solve_one_equation(expr, var, debug_callback)
+
+        # 处理 SqrtExpression 或 TermWithSqrt 直接传入（非 AlgebraicExpression 包装）
+        if isinstance(expr, SqrtExpression):
+            # √(A) = 0 → A = 0
+            return self._solve_radical_equation(expr.inner_expr, var, debug_callback, depth + 1, seen)
+        if isinstance(expr, TermWithSqrt):
+            # coeff * √(A) = 0 → coeff=0 或 √(A)=0
+            coeff_expr = AlgebraicExpression([expr.coeff])
+            sol1 = self._solve_radical_equation(coeff_expr, var, debug_callback, depth + 1, seen)
+            sol2 = self._solve_radical_equation(expr.sqrt_expr, var, debug_callback, depth + 1, seen)
+            return sol1 + sol2
 
         # 分离根号项（仅包含变量 var 的根号）和其他项
         radical_terms = []
@@ -2248,8 +2283,8 @@ class AlgebraicCalculator(AlgebraicParser):
             inner_times_neg_count = (inner * (count_term * Fraction(-1, 1))).simplify(debug_callback)
         else:
             # 如果 inner 是简单类型（如单变量），直接构造代数表达式
-            inner_times_count = AlgebraicExpression([AlgebraicTerm(count, 1)]) * inner
-            inner_times_neg_count = AlgebraicExpression([AlgebraicTerm(-count, 1)]) * inner
+            inner_times_count = AlgebraicExpression([AlgebraicTerm(Fraction(count, 1))]) * inner
+            inner_times_neg_count = AlgebraicExpression([AlgebraicTerm(Fraction(-count, 1))]) * inner
 
         # 情况1: inner ≥ 0 => 绝对值项的和 = count * inner
         eq1 = (inner_times_count + rest).simplify(debug_callback)

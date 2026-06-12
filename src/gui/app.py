@@ -79,8 +79,15 @@ class AlgebraCalculatorGUI:
         self.debug_callback = DebugCallback(self.debug_text, self.debug_level.get(),
                                             display_speed=saved_speed)
 
+        # 防卡死：心跳检测
+        self._freeze_test_start = 0  # 当前测试开始时间戳
+        self._freeze_check_count = 0  # 心跳计数
+        self._current_test_name = ""
+
         # 启动定时器处理debug消息队列
         self.process_debug_queue()
+        # 启动防卡死心跳检测
+        self.freeze_heartbeat()
 
     def process_debug_queue(self):
         """定期处理debug消息队列，间隔和批量大小由速度设置决定"""
@@ -95,6 +102,27 @@ class AlgebraCalculatorGUI:
         # 使用动态延迟
         delay = self.debug_callback.delay_ms if self.debug_callback else 100
         self.root.after(delay, self.process_debug_queue)
+
+    def freeze_heartbeat(self):
+        """防卡死心跳检测：每2秒检查是否有测试卡住超过5秒"""
+        import time as time_mod
+        if self.test_thread and self.test_thread.is_alive():
+            if hasattr(self, '_current_test_name') and self._current_test_name:
+                now = time_mod.time()
+                if self._freeze_test_start == 0:
+                    self._freeze_test_start = now
+                elapsed = now - self._freeze_test_start
+                if elapsed > 5.0:
+                    # 疑似卡死，更新进度窗口
+                    if self.test_progress_window:
+                        self.test_progress_window.show_freeze_warning(
+                            self._current_test_name, elapsed)
+            else:
+                self._freeze_test_start = 0  # 没有当前测试，重置计时
+        else:
+            self._freeze_test_start = 0
+        # 每2秒检查一次
+        self.root.after(2000, self.freeze_heartbeat)
 
     def setup_styles(self):
         """设置样式"""
@@ -1209,55 +1237,57 @@ class AlgebraCalculatorGUI:
     def _are_solutions_equivalent(self, expected, actual, test_type):
         """判断两个解字符串是否数学等价
 
-        策略：
-        1. 用计算器自身的解析+化简归一化表达式值，消除格式差异（如 √(1/2) vs (√2)/2）
-        2. 对复杂表达式用 sympy 精确比较
+        策略：用计算器归一化期望值，实际结果保持计算器输出形式不变。
+        - 实际结果 already 是计算器的规范输出，不应重新解析（避免 "1/2x" 被误解析为 "(1/2)x"）
+        - 只对期望值做 parse → simplify 得到计算器规范形式
         """
         import re
 
-        def _normalize_value(val_str):
-            """用计算器规范化单个表达式的字符串形式"""
+        def _normalize_expected(val_str):
+            """将期望值通过计算器转为规范形式"""
+            if not val_str:
+                return val_str
+            val_str = val_str.strip()
+            if len(val_str) > 200:
+                return val_str.replace(' ', '')
             try:
                 expr = self.calculator.parse_expression(val_str)
                 if hasattr(expr, 'simplify'):
                     simplified = expr.simplify()
                     s = str(simplified)
-                    # 清理显示格式
                     s = s.replace('+-', '-').replace('--', '+')
+                    s = s.replace(' ', '')
                     return s
             except Exception:
                 pass
-            return val_str
+            return val_str.replace(' ', '')
+
+        def _clean_actual(val_str):
+            """清理实际结果的空白（不重新解析）"""
+            if not val_str:
+                return ''
+            return val_str.strip().replace(' ', '')
 
         def _values_match(e_val, a_val):
-            """比较两个变量值是否数学等价"""
-            # 快速路径：完全相同
+            """比较期望值（需归一化）和实际值（已是规范形式）"""
+            # 快速路径
             if e_val == a_val:
                 return True
-            # 归一化后比较
-            e_norm = _normalize_value(e_val)
-            a_norm = _normalize_value(a_val)
-            if e_norm == a_norm:
+            e_clean = e_val.replace(' ', '') if e_val else ''
+            a_clean = a_val.replace(' ', '') if a_val else ''
+            if e_clean == a_clean:
                 return True
-            # sympy 精确比较
+            # 期望值通过计算器归一化后与实际清洁值比较
             try:
-                import sympy as sp
-                e_s = e_norm.replace(' ', '')
-                a_s = a_norm.replace(' ', '')
-                # 转换 √(...) → sqrt(...)
-                while '√(' in e_s:
-                    e_s = re.sub(r'√\(([^()]+)\)', r'sqrt(\1)', e_s)
-                while '√(' in a_s:
-                    a_s = re.sub(r'√\(([^()]+)\)', r'sqrt(\1)', a_s)
-                e_s = e_s.replace('^', '**')
-                a_s = a_s.replace('^', '**')
-                e_s = re.sub(r'(\d)([a-zA-Z])', r'\1*\2', e_s)
-                a_s = re.sub(r'(\d)([a-zA-Z])', r'\1*\2', a_s)
-                e_expr = sp.sympify(e_s)
-                a_expr = sp.sympify(a_s)
-                return sp.simplify(e_expr - a_expr) == 0
+                e_norm = _normalize_expected(e_val)
+                if e_norm == a_clean:
+                    return True
+                # 如果期望归一化后含有括号差异，再尝试两边都是清洁值直接比
+                if e_clean == a_clean:
+                    return True
             except Exception:
-                return False
+                pass
+            return False
 
         def _parse_pairs(line):
             """解析 'var = val, var = val' 格式"""
@@ -1271,6 +1301,12 @@ class AlgebraCalculatorGUI:
         # 归一化分隔符
         expected = expected.replace(' 或 ', '\n').replace('或 ', '\n').replace(' 或', '\n')
         actual = actual.replace(' 或 ', '\n').replace('或 ', '\n').replace(' 或', '\n')
+
+        # 快速路径：完全相同
+        if expected.strip() == actual.strip():
+            return True
+        if expected.replace(' ', '') == actual.replace(' ', ''):
+            return True
 
         # 无解/恒等类型的模糊匹配
         _no_sol = ('无解', '矛盾方程', '无法求解', '无法显示', '目前不支持', '无穷多解', '恒等式')
@@ -1286,7 +1322,8 @@ class AlgebraCalculatorGUI:
             exp_pairs = _parse_pairs(exp_groups[0])
             act_pairs = _parse_pairs(act_groups[0])
             if not exp_pairs or not act_pairs:
-                return expected.strip() == actual.strip()
+                # 无变量对 → 归一化期望值后比较
+                return _normalize_expected(expected.strip()) == _clean_actual(actual.strip())
             for var in exp_pairs:
                 if var not in act_pairs:
                     return False
@@ -1308,12 +1345,11 @@ class AlgebraCalculatorGUI:
                     continue
                 act_pairs = _parse_pairs(act_group)
                 if not exp_pairs or not act_pairs:
-                    if exp_group == act_group:
+                    if _normalize_expected(exp_group) == _clean_actual(act_group):
                         matched_act.add(j)
                         found = True
                         break
                     continue
-                # 比较共同的变量
                 common = set(exp_pairs.keys()) & set(act_pairs.keys())
                 if not common:
                     continue
@@ -1332,11 +1368,13 @@ class AlgebraCalculatorGUI:
 
     def _run_tests_thread(self, all_tests):
         """在后台线程中运行指定的测试用例列表"""
+        import time as time_mod
         try:
             debug_cb = self.debug_callback if self.debug_enabled.get() else None
             total_tests = len(all_tests)
             passed = 0
             failed = 0
+            self._current_test_name = ""  # 防卡死：记录当前测试
 
             # 记录测试开始
             if debug_cb:
@@ -1362,6 +1400,11 @@ class AlgebraCalculatorGUI:
                     else:
                         solve_vars = None
                         mode = None
+
+                # 防卡死：记录当前正在处理的测试并重置计时
+                self._current_test_name = f"#{i+1}/{total_tests} [{test_type}] {test_input[:60]}"
+                self._freeze_test_start = time_mod.time()
+                test_start = time_mod.time()
 
                 progress = (i + 1) / total_tests * 100
                 self.root.after(0, self._update_test_progress, progress, i + 1, total_tests, test_input)
@@ -1430,7 +1473,19 @@ class AlgebraCalculatorGUI:
                     )
                     failed += 1
 
+                # 防卡死：计算耗时，超时测试发出警告
+                test_elapsed = time_mod.time() - test_start
+                if test_elapsed > 3.0:
+                    slow_msg = f"⚠ 慢测试 ({test_elapsed:.1f}s): #{i+1} [{test_type}] {test_input[:50]}"
+                    if debug_cb:
+                        debug_cb(slow_msg, level=1)
+                # 清除当前测试记录
+                self._current_test_name = ""
+
                 time.sleep(0.05)
+
+            # 清除防卡死标记
+            self._current_test_name = ""
 
             # 记录测试完成
             if debug_cb:

@@ -277,13 +277,23 @@ class TestProgressWindow:
         self.progress_var.set(value)
         self.progress_label.config(text=f"进度: {current}/{total} ({value:.1f}%)")
         if current_test:
-            if len(current_test) > 40:
-                display_test = current_test[:37] + "..."
+            if len(current_test) > 50:
+                display_test = current_test[:47] + "..."
             else:
                 display_test = current_test
-            self.detail_label.config(text=f"当前测试: {display_test}")
+            self.detail_label.config(text=f"当前: {display_test}")
         else:
             self.detail_label.config(text="")
+        self.window.update_idletasks()
+
+    def show_freeze_warning(self, test_name, elapsed_sec):
+        """防卡死：显示当前卡住的测试和耗时"""
+        self.progress_label.config(
+            text=f"⚠ 疑似卡死 ({elapsed_sec:.0f}s)", foreground='red')
+        if len(test_name) > 50:
+            test_name = test_name[:47] + "..."
+        self.detail_label.config(
+            text=f"卡在: {test_name}", foreground='red')
         self.window.update_idletasks()
 
     def cancel(self):

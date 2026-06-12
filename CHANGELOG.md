@@ -1,3 +1,76 @@
+# 更新说明 (2026.6.12) — 深度测试与 Bug 修复
+
+## 🐛 Bug 修复 (16项)
+
+### 计算错误修复 (5项)
+
+| # | 问题 | 修复前 | 修复后 | 根因 |
+|---|------|--------|--------|------|
+| 1 | `√(x)=0` 解方程错误 | `x = 1` | `x = 0` | `from_string` 对中文返回 1 + `seen` 集合字符串碰撞 |
+| 2 | `|x|-|x|` 不抵消 | `|(-x)|+|x|` | `0` | `AbsoluteValue.__mul__` 将负号吸入内部，simplify 未检测相反数抵消 |
+| 3 | `(-1)*|x|` 错误输出 0 | `0` | `|(-x)|` | 规范化 key 查找失败导致项丢失 |
+| 4 | `|x|*|x|` 嵌套绝对值 | `||x²||` | `|x²|` | `AbsoluteValue.__mul__` 未处理两个绝对值相乘 |
+| 5 | `x^(1/2)*x^(1/2)` 错误输出 0 | `0` | `x` | `no_paren_pattern` 正则误匹配 `*` 运算符 |
+
+### 解析器修复 (4项)
+
+| # | 问题 | 修复前 | 修复后 | 根因 |
+|---|------|--------|--------|------|
+| 6 | `e/e` 不约分 | `e` | `1` | `_parse_term` 中 `is_constant()` 对数学常数 e 的短路错误 |
+| 7 | `--x` 双负号不消去 | `-x` | `x` | `_parse_add_sub` 连续负号未翻转符号 |
+| 8 | `1/(2x)` 解析为 `(1/2)x` | `(1/2)x` | `1/(2x)` | `_handle_parentheses` 移除了隐式乘法所需的括号 |
+| 9 | `2x(x+2)` 解析失败 | 崩溃 | `4x+2x²` | `_insert_implicit_multiplication` 中 `c.isalpha()+next_c=='('` 被错误放在独立 elif 分支 |
+
+### 化简与求解器修复 (4项)
+
+| # | 问题 | 修复前 | 修复后 | 根因 |
+|---|------|--------|--------|------|
+| 10 | `1/x+1/y` 不合并 | 不合并 | `(x+y)/xy` | `FractionExpression.simplify` 过度展开产生负指数分式 |
+| 11 | `0*|x|` 输出 `|0|` | `|0|` | `0` | `AlgebraicTerm.__mul__` 零系数时保留变量导致 `is_constant` 失败 |
+| 12 | `xy=6;x+y=5` 分数不简化 | `6/3, 6/2` | `2, 3` | `_substitute_solution` 中 simplify 被注释掉 |
+| 13 | `|x/y+y/x|=2;x+y=4` 无解 | 无解 | `x=2, y=2` | `_eliminate` 单方程单变量缺 abs 检查；`AlgebraicTerm(count,1)` 类型错误 |
+
+### 测试系统修复 (3项)
+
+| # | 问题 | 修复前 | 修复后 | 根因 |
+|---|------|--------|--------|------|
+| 14 | 测试运行卡死 | sympy 超时 | 秒级完成 | 移除 sympy 依赖，改用计算器自身归一化比较 |
+| 15 | 结果相同仍报错 | 误报 | 正确匹配 | 只归一化期望值（不重解析实际结果） |
+| 16 | `AlgebraicExpression.__init__` 包装错误 | 崩溃 | 正常工作 | `FractionExpression` 等类型未在 `__init__` 中处理 |
+
+## ✨ 新功能
+
+- **防卡死心跳检测**：每 2 秒检查测试线程；卡住超 5 秒在进度窗口显示红色警告和卡住的测试名
+- **慢测试警告**：超 3 秒的测试自动输出 warning 到 debug 日志
+- **计算器归一化比较**：`_are_solutions_equivalent` 完全移除 sympy，用计算器自身的 `parse → simplify` 统一表示形式后比较字符串
+- **零系数消除**：`0*x`、`0*|x|` 等自动返回 `0`，不再保留残余变量
+
+## 🧪 测试系统
+
+- **测试用例从 229 增长到 252**（+23 个回归测试）
+- **新增 "6.12 回归测试" 分类**，覆盖所有修复 bug
+- **全部 252 测试通过，0 错误，0 差异**
+
+## 🔧 关键代码变更
+
+| 文件 | 变更 |
+|------|------|
+| `core/expression.py` | `from_string` 输入验证、`__init__` 包装所有表达式类型、`__truediv__` 修复、绝对值互消检测、分式展开防负指数、嵌套分式处理、零系数消除 |
+| `core/algebra_parser.py` | 连续负号翻转、`_insert_implicit_multiplication` 逻辑修复、`_handle_parentheses` 隐式乘括号保留、`no_paren_pattern` 正则修复 |
+| `core/solver.py` | `_solve_one_equation` 无解检测、`seen` 防碰撞、`_eliminate` 单变量 abs/radical 委托、`_substitute_solution` 启用 simplify、`_solve_abs_multivar` 类型修复 |
+| `gui/app.py` | 移除 sympy 比较、计算器归一化比较、防卡死心跳、慢测试警告 |
+| `gui/widgets.py` | `show_freeze_warning` 防卡死进度显示 |
+| `gui/test_data.py` | 新增 23 个回归测试、更新 5 个期望值 |
+
+## 🚀 运行方式
+
+```bash
+cd src
+pip install sympy   # 仅因式分解和高次方程求根需要
+python run.py
+```
+
+
 # 更新说明 (2025.6.5)(ai写的)
 
 ## 🐛 Bug 修复 (12项)
