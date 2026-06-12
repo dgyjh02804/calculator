@@ -16,7 +16,7 @@ from gui.test_data import get_test_categories
 class AlgebraCalculatorGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("代数表达式计算器 V2.0.2(稳定版) --------------------对数+高次方程 --------------------   构建时间: 6.5  ")
+        self.root.title("代数表达式计算器 V2.0.3(稳定版) --------------------对数+高次方程 --------------------   构建时间: 6.12  ")
         # 根据屏幕分辨率自适应窗口大小
         screen_width = self.root.winfo_screenwidth()
         screen_height = self.root.winfo_screenheight()
